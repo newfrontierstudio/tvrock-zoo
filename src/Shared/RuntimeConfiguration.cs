@@ -6,13 +6,22 @@ internal sealed class RuntimeConfiguration
 {
     public string TvRockFolder { get; set; } = "";
     public string TvRockUrl { get; set; } = "http://127.0.0.1:8969/mon/";
-    public bool ExcludeNhkPromos { get; set; }
     internal static string Home => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TVRockZoo");
     internal static string ConfigPath => Path.Combine(Home, "connection.json");
     private static RuntimeConfiguration? _current;
     internal static RuntimeConfiguration Current => _current ??= File.Exists(ConfigPath)
         ? JsonSerializer.Deserialize<RuntimeConfiguration>(File.ReadAllText(ConfigPath)) ?? new() : new();
     internal static Uri BaseUri => new(Current.TvRockUrl);
+    internal static string NormalizeUrl(string text)
+    {
+        if (!Uri.TryCreate(text.Trim(), UriKind.Absolute, out var uri)) return text.Trim();
+        var builder = new UriBuilder(uri) { Query = "", Fragment = "" };
+        var leaf = builder.Path.Split('/').Last();
+        if (new[] { "list", "day", "now", "kwl", "kws", "reg", "new" }.Contains(leaf))
+            builder.Path = builder.Path[..(builder.Path.LastIndexOf('/') + 1)];
+        else if (!builder.Path.EndsWith('/')) builder.Path += "/";
+        return builder.Uri.AbsoluteUri;
+    }
     internal static bool IsAllowed(Uri uri) => uri.Scheme == "http" && uri.IsLoopback &&
         uri.Authority == BaseUri.Authority && uri.AbsolutePath.StartsWith(BaseUri.AbsolutePath, StringComparison.Ordinal);
     internal string? Validate()

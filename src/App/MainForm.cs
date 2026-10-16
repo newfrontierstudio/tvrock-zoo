@@ -37,7 +37,7 @@ internal sealed partial class MainForm : Form
     public MainForm(bool startInTray)
     {
         _startInTray = startInTray;
-        Text = "TVRock Zoo — 予約・番組表 Ver.0.1.0";
+        Text = "TVRock Zoo — 予約・番組表 Ver.0.1.1";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(1080, 700);
         MinimumSize = new Size(780, 520);
@@ -92,7 +92,7 @@ internal sealed partial class MainForm : Form
         var enabled = new ToolStripMenuItem("3日ごとの自動おすすめ予約") { CheckOnClick = true, Checked = !File.Exists(Path.Combine(RecommendationHome, "recommend-disabled.txt")) };
         enabled.CheckedChanged += (_, _) => { Directory.CreateDirectory(RecommendationHome); var flag = Path.Combine(RecommendationHome,"recommend-disabled.txt"); if(enabled.Checked) File.Delete(flag); else File.WriteAllText(flag,"off"); };
         menu.Items.Add(enabled);
-        menu.Items.Add("接続設定・PR除外", null, (_, _) => { using var dialog = new SetupDialog(); if(dialog.ShowDialog(this)==DialogResult.OK) MessageBox.Show(this,"設定を保存しました。アプリを終了して起動し直してください。","接続設定"); });
+        menu.Items.Add("接続設定", null, (_, _) => { using var dialog = new SetupDialog(); if(dialog.ShowDialog(this)==DialogResult.OK) MessageBox.Show(this,"設定を保存しました。アプリを終了して起動し直してください。","接続設定"); });
         menu.Items.Add("おすすめの履歴", null, (_, _) => { Directory.CreateDirectory(Path.Combine(RecommendationHome,"recommend-history")); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.Combine(RecommendationHome,"recommend-history")){UseShellExecute=true}); });
         _recommend.ContextMenuStrip = menu;
         _recommend.Click += async (_, _) => await RunRecommendationsAsync();
@@ -531,7 +531,7 @@ internal sealed partial class MainForm : Form
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("終了", null, (_, _) => ExitFromTray());
         _trayIcon.Icon = _appIcon;
-        _trayIcon.Text = "TVRock Zoo Ver.0.1.0";
+        _trayIcon.Text = "TVRock Zoo Ver.0.1.1";
         _trayIcon.ContextMenuStrip = menu;
         _trayIcon.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowFromTray(); };
         _trayIcon.Visible = true;
@@ -541,7 +541,7 @@ internal sealed partial class MainForm : Form
     {
         if (!_startInTray) return;
         Hide();
-        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.0.1.0", "常駐を開始しました。通知領域のアイコンをクリックすると表示します。", ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.0.1.1", "常駐を開始しました。通知領域のアイコンをクリックすると表示します。", ToolTipIcon.Info);
     }
 
     private void HideToTrayWhenClosing(FormClosingEventArgs e)
@@ -549,7 +549,7 @@ internal sealed partial class MainForm : Form
         if (_exitRequested || e.CloseReason == CloseReason.WindowsShutDown) return;
         e.Cancel = true;
         Hide();
-        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.0.1.0", "通知領域で常駐しています。右クリックから終了できます。", ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.0.1.1", "通知領域で常駐しています。右クリックから終了できます。", ToolTipIcon.Info);
     }
 
     private void ShowFromTray()

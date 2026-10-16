@@ -25,8 +25,6 @@ internal sealed partial class MainForm
         }
         UpdateDisabledCaption();
     }
-    internal static string PromoOverrides=>Path.Combine(RecommendationHome,"pr-filter-exceptions.json");
-    internal static HashSet<string> ReadPromoOverrides(){try{return File.Exists(PromoOverrides)?JsonSerializer.Deserialize<HashSet<string>>(File.ReadAllText(PromoOverrides))??[]:[];}catch{return [];}}
     async Task ChangeReservationEnabled(Booking booking,bool enable)
     {
         if(_changingReservation)return;_changingReservation=true;
@@ -39,7 +37,6 @@ internal sealed partial class MainForm
             await NativeGet("regsch?"+string.Join("&",fields.Select(p=>Data.Encode(p.Key)+"="+Data.Encode(p.Value))));await Task.Delay(400);
             var updated=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==current.Id);if(updated==null||updated.Enabled!=enable)throw new IOException("反映を確認できません。一覧を更新して状態をご確認ください。");
             RecordReservationChange(current,enable);
-            if(enable&&!_undoInProgress&&PromoFilter.IsExcluded(current.Title)){var overrides=ReadPromoOverrides();overrides.Add(current.Id);File.WriteAllText(PromoOverrides,JsonSerializer.Serialize(overrides));}
             File.WriteAllText(Path.Combine(folder,"result.txt"),current.Id+" enabled="+enable);LoadNativeReservations();
         }catch(Exception e){MessageBox.Show(this,e.Message,"予約の切替");}finally{_changingReservation=false;}
     }

@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><StartupObject>Bench</StartupObject><RootNamespace>TsScheduler</RootNamespace></PropertyGroup>
+<ItemGroup><Compile Include="../src/App/*.cs"/><Compile Include="../src/Shared/*.cs"/><PackageReference Include="HtmlAgilityPack" Version="1.12.4"/><PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3485.44"/></ItemGroup>
+</Project>

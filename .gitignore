@@ -18,3 +18,5 @@ recommend-state.json
 recommend-status.json
 *.log
 *.bak
+
+benchmark-results.json

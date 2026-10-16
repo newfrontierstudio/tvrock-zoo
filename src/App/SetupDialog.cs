@@ -4,7 +4,6 @@ internal sealed class SetupDialog : Form
 {
     readonly TextBox folder = new() { Dock = DockStyle.Fill };
     readonly TextBox address = new() { Dock = DockStyle.Fill };
-    readonly CheckBox promos = new() { AutoSize = true, Text = "NHKスペシャルのPR予約を自動で無効にする" };
     internal SetupDialog()
     {
         Text = "TVRock Zoo — 接続設定";
@@ -15,7 +14,14 @@ internal sealed class SetupDialog : Form
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false; MinimizeBox = false;
         var config = Zoo.RuntimeConfiguration.Current;
-        folder.Text = config.TvRockFolder; address.Text = config.TvRockUrl; promos.Checked = config.ExcludeNhkPromos;
+        folder.Text = config.TvRockFolder; address.Text = config.TvRockUrl;
+        if (folder.Text.Length == 0) {
+            foreach (var process in System.Diagnostics.Process.GetProcessesByName("TVRock"))
+                using (process) try {
+                    var candidate = Path.GetDirectoryName(process.MainModule?.FileName);
+                    if (candidate != null && File.Exists(Path.Combine(candidate,"tvrock.sch"))) { folder.Text = candidate; break; }
+                } catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+        }
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), ColumnCount = 3, RowCount = 5 };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 125));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -25,12 +31,11 @@ internal sealed class SetupDialog : Form
         browse.Click += (_, _) => { using var picker = new FolderBrowserDialog(); if (picker.ShowDialog(this) == DialogResult.OK) folder.Text = picker.SelectedPath; };
         layout.Controls.Add(browse, 2, 0);
         layout.Controls.Add(new Label { Text = "TVRock Web URL", AutoSize = true }, 0, 1); layout.Controls.Add(address, 1, 1); layout.SetColumnSpan(address, 2);
-        layout.Controls.Add(promos, 0, 2); layout.SetColumnSpan(promos, 3);
-        var note = new Label { AutoSize = true, Text = "TVRock本体は別途必要です。自動おすすめ予約は初期状態でオフです。\nGPT不使用・PC内処理・外部送信なし・API料金なし。" };
+        var note = new Label { AutoSize = true, MaximumSize = new Size(620,0), Text = "①「参照」でTVRockのフォルダーを選びます（起動中なら自動検出）。\n②いつもTVRockを開くURLを貼り付けます。末尾の /list などは自動で整えます。\n③「保存して続ける」で完了。おすすめ予約は初期状態でオフです。" };
         layout.Controls.Add(note, 0, 3); layout.SetColumnSpan(note, 3);
         var save = new Button { Text = "保存して続ける", AutoSize = true };
         save.Click += (_, _) => {
-            var updated = new Zoo.RuntimeConfiguration { TvRockFolder = folder.Text.Trim(), TvRockUrl = address.Text.Trim(), ExcludeNhkPromos = promos.Checked };
+            var updated = new Zoo.RuntimeConfiguration { TvRockFolder = folder.Text.Trim(), TvRockUrl = Zoo.RuntimeConfiguration.NormalizeUrl(address.Text) };
             if (updated.Validate() is string error) { MessageBox.Show(this, error, "接続設定"); return; }
             try { updated.Save(); DialogResult = DialogResult.OK; Close(); } catch (Exception e) { MessageBox.Show(this, e.Message); }
         };

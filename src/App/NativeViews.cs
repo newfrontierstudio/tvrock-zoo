@@ -36,7 +36,7 @@ internal sealed partial class MainForm
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.0.1.0";
+        Text="TVRock Zoo — 予約・番組表 Ver.0.1.1";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;
@@ -83,7 +83,7 @@ internal sealed partial class MainForm
         foreach(var grid in new[]{_nativeReservations,_disabledReservations,_nativeGuide,_nativeKeywords})grid.CellFormatting+=(_,e)=>{if(e.ColumnIndex>=0&&grid.Columns[e.ColumnIndex].Name=="station"&&e.Value is string text)e.Value=text.Replace("MX1","MX");};
         _nativeStation.FormattingEnabled=true;
         _nativeStation.Format+=(_,e)=>{if(e.ListItem is string text)e.Value=text.Replace("MX1","MX");};
-        _nativeTimer.Tick+=async(_,_)=>{await FilterPromoReservationsAsync();if(ReservationStamp()!=_reservationReadStamp)LoadNativeReservations();if(DateTimeOffset.Now>=_nextGuideAttempt&&!_guideRefreshing){_nextGuideAttempt=DateTimeOffset.Now.AddMinutes(30);await RefreshNativeGuide();}};_nativeTimer.Start();
+        _nativeTimer.Tick+=async(_,_)=>{if(ReservationStamp()!=_reservationReadStamp)LoadNativeReservations();if(DateTimeOffset.Now>=_nextGuideAttempt&&!_guideRefreshing){_nextGuideAttempt=DateTimeOffset.Now.AddMinutes(30);await RefreshNativeGuide();}};_nativeTimer.Start();
     }
     static readonly Dictionary<DataGridView,(int Column,bool Desc)> NativeSort=[];
     static void SortNativeGrid(DataGridView grid,int index)

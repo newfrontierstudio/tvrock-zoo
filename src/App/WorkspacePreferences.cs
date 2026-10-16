@@ -10,7 +10,7 @@ internal sealed partial class MainForm
     UndoChange? _undoChange;
     internal static string? TestLayoutFile;
     readonly Dictionary<string,GridLayout> _pendingGridLayouts=[];
-    sealed record UndoChange(Booking Before,bool Applied,bool HadPromoOverride);
+    sealed record UndoChange(Booking Before,bool Applied);
     sealed class GridLayout {public Dictionary<string,int> Widths{get;set;}=[];public string? First{get;set;}public int Index{get;set;}public int Horizontal{get;set;}}
     sealed class WorkspaceLayout {public bool Collapsed{get;set;}public int Tab{get;set;}public Dictionary<string,GridLayout> Grids{get;set;}=[];public DateTime Day{get;set;}public Point Scroll{get;set;}}
     IEnumerable<(string Name,DataGridView Grid)> LayoutGrids()=>new[]{("reservations",_nativeReservations),("disabled",_disabledReservations),("keywords",_nativeKeywords),("guide",_nativeGuide)};
@@ -54,7 +54,7 @@ internal sealed partial class MainForm
     }
     void RecordReservationChange(Booking before,bool applied)
     {
-        if(_undoInProgress){var undo=_undoChange;if(undo!=null&&PromoFilter.IsExcluded(before.Title)){var ids=ReadPromoOverrides();if(undo.HadPromoOverride)ids.Add(before.Id);else ids.Remove(before.Id);File.WriteAllText(PromoOverrides,JsonSerializer.Serialize(ids));}_undoChange=null;_undoButton.Enabled=false;}
-        else{_undoChange=new(before,applied,ReadPromoOverrides().Contains(before.Id));_undoButton.Enabled=true;_undoButton.AccessibleDescription=before.Title;}
+        if(_undoInProgress){_undoChange=null;_undoButton.Enabled=false;}
+        else{_undoChange=new(before,applied);_undoButton.Enabled=true;_undoButton.AccessibleDescription=before.Title;}
     }
 }
