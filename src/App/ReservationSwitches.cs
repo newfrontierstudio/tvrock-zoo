@@ -15,6 +15,7 @@ internal sealed partial class MainForm
         var toolbar=page.Controls.OfType<FlowLayoutPanel>().First();page.Controls.Clear();var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3};layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,0));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,180));toolbar.Visible=false;toolbar.Dock=DockStyle.Fill;_disabledBox.Dock=DockStyle.Fill;layout.Controls.Add(toolbar,0,0);layout.Controls.Add(_nativeReservations,0,1);layout.Controls.Add(_disabledBox,0,2);page.Controls.Add(layout);
         _nativeReservations.CellClick+=async(_,e)=>{if(e.RowIndex>=0&&e.ColumnIndex==0&&_nativeReservations.Rows[e.RowIndex].Tag is Booking b)await ChangeReservationEnabled(b,false);};
         _disabledReservations.CellClick+=async(_,e)=>{if(e.RowIndex>=0&&e.ColumnIndex==0&&_disabledReservations.Rows[e.RowIndex].Tag is Booking b)await ChangeReservationEnabled(b,true);};
+        _nativeReservations.Columns[0].ToolTipText="○をクリック：録画しない一覧へ";_disabledReservations.Columns[0].ToolTipText="×をクリック：有効な予約に戻す";
         _nativeReservations.Columns[0].DefaultCellStyle.Alignment=DataGridViewContentAlignment.MiddleCenter;_disabledReservations.Columns[0].DefaultCellStyle.Alignment=DataGridViewContentAlignment.MiddleCenter;
     }
     void LoadDisabledReservations()
@@ -25,19 +26,29 @@ internal sealed partial class MainForm
         }
         UpdateDisabledCaption();
     }
+    void RevealChangedReservation(string id,bool enabled)
+    {
+        if(!enabled)SetDisabledCollapsed(false);
+        var grid=enabled?_nativeReservations:_disabledReservations;
+        var row=grid.Rows.Cast<DataGridViewRow>().FirstOrDefault(r=>r.Tag is Booking b&&b.Id==id);
+        if(row==null)return;
+        grid.ClearSelection();row.Selected=true;grid.CurrentCell=row.Cells["title"];grid.Parent?.PerformLayout();
+        if(grid.Visible&&grid.DisplayedRowCount(false)>0)grid.FirstDisplayedScrollingRowIndex=row.Index;
+    }
     async Task ChangeReservationEnabled(Booking booking,bool enable)
     {
         if(_changingReservation)return;_changingReservation=true;
         try{
-            var current=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==booking.Id&&b.Start==booking.Start&&Data.Norm(b.Title)==Data.Norm(booking.Title));if(current==null)throw new IOException("予約が更新されています。一覧を更新してください。");if(current.Enabled==enable){LoadNativeReservations();return;}
+            var current=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==booking.Id&&b.Start==booking.Start&&Data.Norm(b.Title)==Data.Norm(booking.Title));if(current==null)throw new IOException("予約が更新されています。一覧を更新してください。");if(current.Enabled==enable){LoadNativeReservations();RevealChangedReservation(current.Id,enable);return;}
             if(current.Start<DateTimeOffset.Now.AddMinutes(2)&&current.End>DateTimeOffset.Now)throw new InvalidOperationException("開始直前・録画中の予約です。TVRockの詳細画面から操作してください。");
             string folder=Path.Combine(RecommendationHome,"reservation-changes",DateTime.Now.ToString("yyyyMMdd-HHmmssfff"));Directory.CreateDirectory(folder);File.Copy(Path.Combine(RockFolder,"tvrock.sch"),Path.Combine(folder,"before.sch"));
             string html=await NativeGet("reg?i="+current.Id);File.WriteAllText(Path.Combine(folder,"before.html"),html);var fields=Data.Form(html,"予約を変更");if(fields.GetValueOrDefault("i")!=current.Id||Data.Norm(fields.GetValueOrDefault("title",""))!=Data.Norm(current.Title))throw new InvalidDataException("予約フォームの照合に失敗しました。");
             if(enable)fields["valid"]="true";else fields.Remove("valid");
-            await NativeGet("regsch?"+string.Join("&",fields.Select(p=>Data.Encode(p.Key)+"="+Data.Encode(p.Value))));await Task.Delay(400);
-            var updated=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==current.Id);if(updated==null||updated.Enabled!=enable)throw new IOException("反映を確認できません。一覧を更新して状態をご確認ください。");
+            await NativeGet("regsch?"+string.Join("&",fields.Select(p=>Data.Encode(p.Key)+"="+Data.Encode(p.Value))));
+            Booking? updated=null;
+            for(int attempt=0;attempt<12;attempt++){await Task.Delay(250);updated=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==current.Id);if(updated?.Enabled==enable)break;}if(updated==null||updated.Enabled!=enable)throw new IOException("反映を確認できません。一覧を更新して状態をご確認ください。");
             RecordReservationChange(current,enable);
-            File.WriteAllText(Path.Combine(folder,"result.txt"),current.Id+" enabled="+enable);LoadNativeReservations();
+            File.WriteAllText(Path.Combine(folder,"result.txt"),current.Id+" enabled="+enable);LoadNativeReservations();RevealChangedReservation(current.Id,enable);
         }catch(Exception e){MessageBox.Show(this,e.Message,"予約の切替");}finally{_changingReservation=false;}
     }
 }

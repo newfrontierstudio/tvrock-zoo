@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         SetDisabledCollapsed(false);
     }
     void SetDisabledCollapsed(bool collapsed){_disabledCollapsed=collapsed;_disabledReservations.Visible=!collapsed;if(_disabledBox.Parent is TableLayoutPanel layout)layout.RowStyles[2].Height=collapsed?44:180;UpdateDisabledCaption();}
-    void UpdateDisabledCaption(){_disabledBox.Text="";_foldDisabled.Text=$"{(_disabledCollapsed?"▸":"▾")} 無効予約 {_disabledReservations.Rows.Count}件"+(_disabledCollapsed?" — クリックで開く":" — ×で復活・クリックで折りたたむ");}
+    void UpdateDisabledCaption(){_disabledBox.Text="";_foldDisabled.Text=$"{(_disabledCollapsed?"▸":"▾")} 録画しない {_disabledReservations.Rows.Count}件"+(_disabledCollapsed?" — クリックで開く":" — ×で復活・クリックで折りたたむ");}
     void QueueLayoutSave(){if(!_layoutReady)return;_saveLayoutDelay.Stop();_saveLayoutDelay.Start();}
     static string LayoutFile=>TestLayoutFile??Path.Combine(RecommendationHome,"workspace-layout.json");
     void SaveWorkspaceLayout()
