@@ -1,5 +1,5 @@
 (() => {
-  if (location.pathname !== '/mon/list') return;
+  if (location.pathname !== '/user/list') return;
   document.getElementById('ts-ai-recommendation-style')?.remove();
   const style = document.createElement('style');
   style.id = 'ts-ai-recommendation-style';
@@ -11,13 +11,13 @@
     const entries = Array.isArray(window.__tsAiRecommendations) ? window.__tsAiRecommendations.filter(e => e && typeof e === 'object') : [];
     for (const row of document.querySelectorAll('tr')) {
       const links = [...row.querySelectorAll('a[href]')].filter(a => a.closest('tr') === row);
-      const reservationLink = links.find(a => idOf(a, '/mon/reg'));
+      const reservationLink = links.find(a => idOf(a, '/user/reg'));
       if (!reservationLink) continue;
-      const reservationId = idOf(reservationLink, '/mon/reg');
-      const keywordLink = links.find(a => idOf(a, '/mon/kwl'));
-      const keywordId = keywordLink && idOf(keywordLink, '/mon/kwl');
+      const reservationId = idOf(reservationLink, '/user/reg');
+      const keywordLink = links.find(a => idOf(a, '/user/kwl'));
+      const keywordId = keywordLink && idOf(keywordLink, '/user/kwl');
       const suppression = (window.__tsDuplicateSuppressions || []).find(e => String(e.reservationId) === reservationId && clean(e.programTitle) === clean(reservationLink.textContent));
-      const disabled = links.find(a => idOf(a, '/mon/list') === reservationId && a.textContent.trim() === '×');
+      const disabled = links.find(a => idOf(a, '/user/list') === reservationId && a.textContent.trim() === '×');
       const hideDuplicate = suppression && disabled && !new URLSearchParams(location.search).has('iv');
       if (hideDuplicate) { if (row.style.display !== 'none') row.style.display = 'none'; row.dataset.tsSuppressedDuplicate = 'true'; }
       else if (row.dataset.tsSuppressedDuplicate) { row.style.display = ''; delete row.dataset.tsSuppressedDuplicate; }

@@ -5,7 +5,7 @@ namespace Zoo;
 internal sealed class RuntimeConfiguration
 {
     public string TvRockFolder { get; set; } = "";
-    public string TvRockUrl { get; set; } = "http://127.0.0.1:8969/mon/";
+    public string TvRockUrl { get; set; } = "http://127.0.0.1:8969/user/";
     internal static string Home => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TVRockZoo");
     internal static string ConfigPath => Path.Combine(Home, "connection.json");
     private static RuntimeConfiguration? _current;
@@ -30,7 +30,7 @@ internal sealed class RuntimeConfiguration
             return "dtv.ini・tvrock.sch・tvrock.key があるTVRockのフォルダーを選んでください。";
         if (!Uri.TryCreate(TvRockUrl, UriKind.Absolute, out var uri) || uri.Scheme != "http" || !uri.IsLoopback ||
             uri.UserInfo.Length != 0 || uri.Query.Length != 0 || uri.Fragment.Length != 0 || !uri.AbsolutePath.EndsWith('/'))
-            return "このPCのTVRockのURLを末尾 / 付きで入力してください。例: http://127.0.0.1:8969/mon/";
+            return "このPCのTVRockのURLを末尾 / 付きで入力してください。例: http://127.0.0.1:8969/user/";
         return null;
     }
     internal void Save()

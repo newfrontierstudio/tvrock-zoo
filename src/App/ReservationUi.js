@@ -1,5 +1,5 @@
 (() => {
-  if (!['/mon/kwl', '/mon/kws', '/mon/reg'].includes(location.pathname)) return;
+  if (!['/user/kwl', '/user/kws', '/user/reg'].includes(location.pathname)) return;
   if (document.getElementById('ts-reservation-ui')) return;
   const style = document.createElement('style');
   style.id = 'ts-reservation-ui';
@@ -53,7 +53,7 @@
     }
   }
 
-  if (location.pathname === '/mon/reg') return;
+  if (location.pathname === '/user/reg') return;
   const defaults = ['ronly', 'asd', 'eflw', 'coop', 'dchk2', 'tflw'];
   const hidden = ['wonly', 'npri', 'rmt', 'ron', 'roff', 'dchk', 'vsbt', 'vdsc', 'oneseg'];
   for (const form of document.forms) {

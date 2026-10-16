@@ -188,7 +188,7 @@ internal sealed partial class MainForm : Form
                     window.addEventListener('DOMContentLoaded', () => {
                       window.__applyTsSchedulerStyle?.();
                     });
-                    """.Replace("/mon/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath));
+                    """.Replace("/user/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath));
                 _webStyleInstalled = true;
             }
             _webBrowser.CoreWebView2.Navigate(address.AbsoluteUri);
@@ -223,9 +223,9 @@ internal sealed partial class MainForm : Form
                     const style = document.createElement('style');
                     style.id = 'ts-scheduler-tvrock-style';
                     style.textContent = '';
-                    const isList = location.pathname === '/mon/list'
-                      || location.pathname === '/mon/kwl'
-                      || location.pathname === '/mon/kws';
+                    const isList = location.pathname === '/user/list'
+                      || location.pathname === '/user/kwl'
+                      || location.pathname === '/user/kws';
                     if (isList) {
                       style.textContent += `
                         table { width: 100% !important; }
@@ -266,8 +266,8 @@ internal sealed partial class MainForm : Form
                         }
                       `;
                     }
-                    if (location.pathname === '/mon/kwl' || location.pathname === '/mon/kws') style.textContent += 'td { white-space: pre-line; }';
-                    if (location.pathname === '/mon/now') {
+                    if (location.pathname === '/user/kwl' || location.pathname === '/user/kws') style.textContent += 'td { white-space: pre-line; }';
+                    if (location.pathname === '/user/now') {
                       style.textContent += `
                         .ts-hour-marker {
                           text-align: left !important;
@@ -287,7 +287,7 @@ internal sealed partial class MainForm : Form
                         }
                       `;
                     }
-                    if (location.pathname === '/mon/reg') {
+                    if (location.pathname === '/user/reg') {
                       style.textContent += `
                         html, body { max-width: 100% !important; overflow-x: hidden !important; }
                         body > table { width: 100% !important; table-layout: fixed !important; }
@@ -303,14 +303,14 @@ internal sealed partial class MainForm : Form
                     }
                     (document.head || document.documentElement).appendChild(style);
 
-                    if (location.pathname === '/mon/now') {
+                    if (location.pathname === '/user/now') {
                       document.querySelectorAll('td[rowspan][align="center"]').forEach(cell => {
                         const label = cell.textContent.replace(/\s+/g, '');
                         if (/^(?:[01]?\d|2[0-3])時$/.test(label)) cell.classList.add('ts-hour-marker');
                       });
                     }
 
-                    if (location.pathname === '/mon/list') {
+                    if (location.pathname === '/user/list') {
                       const reservationTable = document.querySelector('table:has(> tbody > tr > td[width="25%"])');
                       let previousDate = '';
                       reservationTable?.querySelectorAll(':scope > tbody > tr').forEach(row => {
@@ -357,7 +357,7 @@ internal sealed partial class MainForm : Form
                     }
 
 
-                    if (location.pathname === '/mon/now' || location.pathname === '/mon/day') {
+                    if (location.pathname === '/user/now' || location.pathname === '/user/day') {
                       style.textContent += `
                         td small { font-size: 14px !important; line-height: 1.42 !important; }
                         td small a { font-size: 15px !important; line-height: 1.3 !important; font-weight: 600; }
@@ -398,7 +398,7 @@ internal sealed partial class MainForm : Form
                     }
                   };
                   window.__applyTsSchedulerStyle();
-                  if (location.pathname === '/mon/kwl') {
+                  if (location.pathname === '/user/kwl') {
                     for (const table of document.querySelectorAll('table')) {
                       const header = [...table.rows].find(row => {
                         const labels = [...row.cells].map(c => c.textContent.replace(/\s/g, ''));
@@ -421,7 +421,7 @@ internal sealed partial class MainForm : Form
             if (stream is not null)
             {
                 using var reader = new StreamReader(stream);
-                await browser.CoreWebView2.ExecuteScriptAsync((await reader.ReadToEndAsync()).Replace("/mon/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath));
+                await browser.CoreWebView2.ExecuteScriptAsync((await reader.ReadToEndAsync()).Replace("/user/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath));
             }
         }
         if (e.IsSuccess && browser.CoreWebView2 is not null && browser.Source?.AbsolutePath == new Uri(Zoo.RuntimeConfiguration.BaseUri,"list").AbsolutePath)
@@ -437,7 +437,7 @@ internal sealed partial class MainForm : Form
                 if(suppressed.ValueKind==System.Text.Json.JsonValueKind.Array)
                     await browser.CoreWebView2.ExecuteScriptAsync("window.__tsDuplicateSuppressions = "+suppressed.GetRawText()+";");
                 using var resource = typeof(MainForm).Assembly.GetManifestResourceStream("TsScheduler.AiRecommendationUi.js");
-                if (resource is not null) { using var reader = new StreamReader(resource); await browser.CoreWebView2.ExecuteScriptAsync((await reader.ReadToEndAsync()).Replace("/mon/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath)); }
+                if (resource is not null) { using var reader = new StreamReader(resource); await browser.CoreWebView2.ExecuteScriptAsync((await reader.ReadToEndAsync()).Replace("/user/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath)); }
             }
             catch (Exception error) { Log("AIおすすめ表示の読み込みに失敗: " + error.Message); }
         }
