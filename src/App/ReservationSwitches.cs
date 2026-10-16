@@ -9,6 +9,7 @@ internal sealed partial class MainForm
     void InitializeReservationSwitches(TabPage page)
     {
         _includeDisabled.Visible=false;
+        InstallReservationHover(_nativeReservations,false);InstallReservationHover(_disabledReservations,true);
         foreach(DataGridViewColumn c in _nativeReservations.Columns)_disabledReservations.Columns.Add((DataGridViewColumn)c.Clone());
         _disabledReservations.DefaultCellStyle=_nativeReservations.DefaultCellStyle.Clone();_disabledReservations.ColumnHeadersDefaultCellStyle=_nativeReservations.ColumnHeadersDefaultCellStyle.Clone();_disabledReservations.EnableHeadersVisualStyles=false;
         _disabledReservations.RowTemplate.Height=_nativeReservations.RowTemplate.Height;_disabledBox.Controls.Add(_disabledReservations);
@@ -17,6 +18,21 @@ internal sealed partial class MainForm
         _disabledReservations.CellClick+=async(_,e)=>{if(e.RowIndex>=0&&e.ColumnIndex==0&&_disabledReservations.Rows[e.RowIndex].Tag is Booking b)await ChangeReservationEnabled(b,true);};
         _nativeReservations.Columns[0].ToolTipText="○をクリック：録画しない一覧へ";_disabledReservations.Columns[0].ToolTipText="×をクリック：有効な予約に戻す";
         _nativeReservations.Columns[0].DefaultCellStyle.Alignment=DataGridViewContentAlignment.MiddleCenter;_disabledReservations.Columns[0].DefaultCellStyle.Alignment=DataGridViewContentAlignment.MiddleCenter;
+    }
+    void InstallReservationHover(DataGridView grid,bool restore)
+    {
+        int hoverRow=-1;
+        void Reset(){int old=hoverRow;hoverRow=-1;grid.Cursor=Cursors.Default;if(old>=0&&old<grid.Rows.Count)grid.InvalidateCell(0,old);}
+        grid.CellMouseMove+=(_,e)=>{int next=e.ColumnIndex==0&&e.RowIndex>=0&&grid.Rows[e.RowIndex].Tag is Booking?e.RowIndex:-1;if(next==hoverRow)return;Reset();hoverRow=next;if(next>=0){grid.Cursor=Cursors.Hand;grid.InvalidateCell(0,next);HideLargeTip();QueueLargeTip(grid,restore?"クリックで録画する予約に戻す":"クリックで録画しない一覧へ移動",grid.PointToClient(Cursor.Position));}};
+        grid.CellMouseLeave+=(_,_)=>Reset();grid.MouseLeave+=(_,_)=>Reset();grid.Scroll+=(_,_)=>Reset();grid.RowsRemoved+=(_,_)=>Reset();
+        grid.CellPainting+=(_,e)=>{
+            if(e.RowIndex<0||e.ColumnIndex!=0||e.RowIndex!=hoverRow)return;
+            e.Paint(e.ClipBounds,DataGridViewPaintParts.All);var bounds=Rectangle.Inflate(e.CellBounds,-4,-3);
+            using var fill=new SolidBrush(Color.FromArgb(225,239,253));using var border=new Pen(Color.FromArgb(77,132,185));
+            e.Graphics!.FillRectangle(fill,bounds);e.Graphics.DrawRectangle(border,bounds);
+            using var font=new Font(e.CellStyle!.Font??grid.Font,FontStyle.Bold);
+            TextRenderer.DrawText(e.Graphics,restore?"×":"○",font,bounds,Color.FromArgb(22,77,132),TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);e.Handled=true;
+        };
     }
     void LoadDisabledReservations()
     {
