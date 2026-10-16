@@ -7,12 +7,14 @@ internal sealed partial class MainForm
     readonly Button _foldDisabled=new(){Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft,FlatStyle=FlatStyle.Flat};
     readonly System.Windows.Forms.Timer _saveLayoutDelay=new(){Interval=600};
     bool _disabledCollapsed,_layoutReady,_undoInProgress;
+    readonly SplitContainer _reservationSplit=new(){Dock=DockStyle.Fill,Orientation=Orientation.Horizontal,FixedPanel=FixedPanel.Panel2,SplitterWidth=7,Size=new Size(1000,800),BackColor=Color.FromArgb(214,224,236),AccessibleName="予約一覧と録画しない一覧の境界。上下にドラッグして高さを調整"};
+    int _disabledExpandedHeight=180;bool _applyingReservationSplit;
     UndoChange? _undoChange;
     internal static string? TestLayoutFile;
     readonly Dictionary<string,GridLayout> _pendingGridLayouts=[];
     sealed record UndoChange(Booking Before,bool Applied);
     sealed class GridLayout {public Dictionary<string,int> Widths{get;set;}=[];public string? First{get;set;}public int Index{get;set;}public int Horizontal{get;set;}}
-    sealed class WorkspaceLayout {public bool Collapsed{get;set;}public int Tab{get;set;}public Dictionary<string,GridLayout> Grids{get;set;}=[];public DateTime Day{get;set;}public Point Scroll{get;set;}}
+    sealed class WorkspaceLayout {public bool Collapsed{get;set;}public int DisabledHeight{get;set;}=180;public int Tab{get;set;}public Dictionary<string,GridLayout> Grids{get;set;}=[];public DateTime Day{get;set;}public Point Scroll{get;set;}}
     IEnumerable<(string Name,DataGridView Grid)> LayoutGrids()=>new[]{("reservations",_nativeReservations),("disabled",_disabledReservations),("keywords",_nativeKeywords),("guide",_nativeGuide)};
     static string? RowIdentity(DataGridViewRow row)=>row.Tag switch{Booking b=>b.Id,KeywordEntry k=>k.Id,Show s=>s.Key,_=>null};
     void InitializeWorkspacePreferences(FlowLayoutPanel toolbar,TabPage page)
@@ -30,18 +32,24 @@ internal sealed partial class MainForm
         Shown+=(_,_)=>BeginInvoke(new Action(()=>{RestoreWorkspaceLayout();_layoutReady=true;}));
         SetDisabledCollapsed(false);
     }
-    void SetDisabledCollapsed(bool collapsed){_disabledCollapsed=collapsed;_disabledReservations.Visible=!collapsed;if(_disabledBox.Parent is TableLayoutPanel layout)layout.RowStyles[2].Height=collapsed?44:180;UpdateDisabledCaption();}
+    void SetDisabledCollapsed(bool collapsed){_disabledCollapsed=collapsed;_disabledReservations.Visible=!collapsed;ApplyReservationSplit();UpdateDisabledCaption();}
+    void ApplyReservationSplit()
+    {
+        int available=_reservationSplit.ClientSize.Height-_reservationSplit.SplitterWidth;if(available<100)return;
+        int bottom=Math.Clamp(_disabledCollapsed?44:_disabledExpandedHeight,32,available-60);
+        _applyingReservationSplit=true;try{_reservationSplit.SplitterDistance=available-bottom;}finally{_applyingReservationSplit=false;}
+    }
     void UpdateDisabledCaption(){_disabledBox.Text="";_foldDisabled.Text=$"{(_disabledCollapsed?"▸":"▾")} 録画しない {_disabledReservations.Rows.Count}件"+(_disabledCollapsed?" — クリックで開く":" — ×で復活・クリックで折りたたむ");}
     void QueueLayoutSave(){if(!_layoutReady)return;_saveLayoutDelay.Stop();_saveLayoutDelay.Start();}
     static string LayoutFile=>TestLayoutFile??Path.Combine(RecommendationHome,"workspace-layout.json");
     void SaveWorkspaceLayout()
     {
         if(!_layoutReady||(TestLayoutFile==null&&Environment.GetCommandLineArgs().Contains("--self-test")))return;
-        try{var state=new WorkspaceLayout{Collapsed=_disabledCollapsed,Tab=_tabs.SelectedIndex,Day=_scheduleDate.Value.Date,Scroll=_schedule.AutoScrollPosition};foreach(var item in LayoutGrids()){var grid=item.Grid;int first=grid.FirstDisplayedScrollingRowIndex;state.Grids[item.Name]=new GridLayout{Widths=grid.Columns.Cast<DataGridViewColumn>().Where(c=>c.Visible).ToDictionary(c=>c.Name,c=>c.Width),First=first>=0?RowIdentity(grid.Rows[first]):null,Index=Math.Max(0,first),Horizontal=grid.HorizontalScrollingOffset};}Directory.CreateDirectory(RecommendationHome);File.WriteAllText(LayoutFile+".tmp",JsonSerializer.Serialize(state));File.Move(LayoutFile+".tmp",LayoutFile,true);}catch(IOException){}catch(InvalidOperationException){}
+        try{var state=new WorkspaceLayout{Collapsed=_disabledCollapsed,DisabledHeight=_disabledExpandedHeight,Tab=_tabs.SelectedIndex,Day=_scheduleDate.Value.Date,Scroll=_schedule.AutoScrollPosition};foreach(var item in LayoutGrids()){var grid=item.Grid;int first=grid.FirstDisplayedScrollingRowIndex;state.Grids[item.Name]=new GridLayout{Widths=grid.Columns.Cast<DataGridViewColumn>().Where(c=>c.Visible).ToDictionary(c=>c.Name,c=>c.Width),First=first>=0?RowIdentity(grid.Rows[first]):null,Index=Math.Max(0,first),Horizontal=grid.HorizontalScrollingOffset};}Directory.CreateDirectory(RecommendationHome);File.WriteAllText(LayoutFile+".tmp",JsonSerializer.Serialize(state));File.Move(LayoutFile+".tmp",LayoutFile,true);}catch(IOException){}catch(InvalidOperationException){}
     }
     void RestoreWorkspaceLayout()
     {
-        try{if(!File.Exists(LayoutFile))return;var state=JsonSerializer.Deserialize<WorkspaceLayout>(File.ReadAllText(LayoutFile));if(state==null)return;SetDisabledCollapsed(state.Collapsed);if(state.Day.Year>2020)_scheduleDate.Value=state.Day;
+        try{if(!File.Exists(LayoutFile))return;var state=JsonSerializer.Deserialize<WorkspaceLayout>(File.ReadAllText(LayoutFile));if(state==null)return;_disabledExpandedHeight=Math.Max(80,state.DisabledHeight);SetDisabledCollapsed(state.Collapsed);if(state.Day.Year>2020)_scheduleDate.Value=state.Day;
             foreach(var item in LayoutGrids()){if(!state.Grids.TryGetValue(item.Name,out var saved))continue;foreach(var size in saved.Widths){if(!item.Grid.Columns.Contains(size.Key))continue;var column=item.Grid.Columns[size.Key];column.AutoSizeMode=DataGridViewAutoSizeColumnMode.None;column.Width=Math.Clamp(size.Value,30,2000);}}
             _pendingGridLayouts.Clear();foreach(var pair in state.Grids)_pendingGridLayouts[pair.Key]=pair.Value;_tabs.SelectedIndex=Math.Clamp(state.Tab,0,_tabs.TabCount-1);BeginInvoke(new Action(()=>{RestorePendingScroll();_schedule.AutoScrollPosition=state.Scroll;}));
         }catch(Exception e)when(e is IOException or JsonException or ArgumentException or InvalidOperationException){Log("表示位置の復元を見送りました: "+e.Message);}

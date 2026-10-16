@@ -13,7 +13,11 @@ internal sealed partial class MainForm
         foreach(DataGridViewColumn c in _nativeReservations.Columns)_disabledReservations.Columns.Add((DataGridViewColumn)c.Clone());
         _disabledReservations.DefaultCellStyle=_nativeReservations.DefaultCellStyle.Clone();_disabledReservations.ColumnHeadersDefaultCellStyle=_nativeReservations.ColumnHeadersDefaultCellStyle.Clone();_disabledReservations.EnableHeadersVisualStyles=false;
         _disabledReservations.RowTemplate.Height=_nativeReservations.RowTemplate.Height;_disabledBox.Controls.Add(_disabledReservations);
-        var toolbar=page.Controls.OfType<FlowLayoutPanel>().First();page.Controls.Clear();var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3};layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,0));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,180));toolbar.Visible=false;toolbar.Dock=DockStyle.Fill;_disabledBox.Dock=DockStyle.Fill;layout.Controls.Add(toolbar,0,0);layout.Controls.Add(_nativeReservations,0,1);layout.Controls.Add(_disabledBox,0,2);page.Controls.Add(layout);
+        var toolbar=page.Controls.OfType<FlowLayoutPanel>().First();toolbar.Visible=false;page.Controls.Clear();
+        _reservationSplit.Panel1.Controls.Add(_nativeReservations);_reservationSplit.Panel2.Controls.Add(_disabledBox);_disabledBox.Dock=DockStyle.Fill;page.Controls.Add(_reservationSplit);
+        _reservationSplit.SplitterMoved+=(_,_)=>{if(!_applyingReservationSplit&&!_disabledCollapsed){_disabledExpandedHeight=_reservationSplit.Height-_reservationSplit.SplitterDistance-_reservationSplit.SplitterWidth;QueueLayoutSave();}};
+        _reservationSplit.SplitterMoving+=(_,_)=>{if(_disabledCollapsed){_disabledCollapsed=false;_disabledReservations.Visible=true;UpdateDisabledCaption();}};
+        _reservationSplit.Resize+=(_,_)=>ApplyReservationSplit();
         _nativeReservations.CellClick+=async(_,e)=>{if(e.RowIndex>=0&&e.ColumnIndex==0&&_nativeReservations.Rows[e.RowIndex].Tag is Booking b)await ChangeReservationEnabled(b,false);};
         _disabledReservations.CellClick+=async(_,e)=>{if(e.RowIndex>=0&&e.ColumnIndex==0&&_disabledReservations.Rows[e.RowIndex].Tag is Booking b)await ChangeReservationEnabled(b,true);};
         _nativeReservations.Columns[0].ToolTipText="○をクリック：録画しない一覧へ";_disabledReservations.Columns[0].ToolTipText="×をクリック：有効な予約に戻す";
