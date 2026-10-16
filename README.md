@@ -25,6 +25,6 @@ TVRockの予約一覧・番組表・自動検索予約を、軽快な専用画�
 
 ## データ・ソース
 
-設定と変更前バックアップは `%LOCALAPPDATA%\TVRockZoo` に保存し、アンインストール後も残します。TVRock本体・BonDriver・録画・個人設定は配布に含みません。
+設定と変更前バックアップは `%LOCALAPPDATA%\TVRockZoo` に保存し、アンインストール後も残します。TVRock本体・BonDriver・録画は配布に含みません。
 
 .NET 8 SDKとInno Setup 6を用意し、`scripts/build.ps1` でビルドできます。ソースのライセンスは未設定です。依存ライブラリは[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)を参照してください。
