@@ -60,11 +60,13 @@ internal sealed partial class MainForm
             string folder=Path.Combine(RecommendationHome,"reservation-changes",DateTime.Now.ToString("yyyyMMdd-HHmmssfff"));Directory.CreateDirectory(folder);File.Copy(Path.Combine(RockFolder,"tvrock.sch"),Path.Combine(folder,"before.sch"));
             string html=await NativeGet("reg?i="+current.Id);File.WriteAllText(Path.Combine(folder,"before.html"),html);var fields=Data.Form(html,"予約を変更");if(fields.GetValueOrDefault("i")!=current.Id||Data.Norm(fields.GetValueOrDefault("title",""))!=Data.Norm(current.Title))throw new InvalidDataException("予約フォームの照合に失敗しました。");
             if(enable)fields["valid"]="true";else fields.Remove("valid");
-            await NativeGet("regsch?"+string.Join("&",fields.Select(p=>Data.Encode(p.Key)+"="+Data.Encode(p.Value))));
+            Exception? sendError=null;
+            try{await NativeGet("regsch?"+string.Join("&",fields.Select(p=>Data.Encode(p.Key)+"="+Data.Encode(p.Value))));}
+            catch(Exception e)when(e is HttpRequestException or TaskCanceledException){sendError=e;File.WriteAllText(Path.Combine(folder,"transport-error.txt"),e.ToString());}
             Booking? updated=null;
-            for(int attempt=0;attempt<12;attempt++){await Task.Delay(250);updated=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==current.Id);if(updated?.Enabled==enable)break;}if(updated==null||updated.Enabled!=enable)throw new IOException("反映を確認できません。一覧を更新して状態をご確認ください。");
+            for(int attempt=0;attempt<12;attempt++){await Task.Delay(250);updated=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==current.Id&&b.Start==current.Start&&Data.Norm(b.Title)==Data.Norm(current.Title));if(updated?.Enabled==enable)break;}if(updated==null||updated.Enabled!=enable)throw new IOException(sendError==null?"反映を確認できません。一覧を更新して状態をご確認ください。":"TVRockとの通信が途切れ、変更を確認できませんでした。状態を更新しました。予約変更は自動再送していません。",sendError);
             RecordReservationChange(current,enable);
             File.WriteAllText(Path.Combine(folder,"result.txt"),current.Id+" enabled="+enable);LoadNativeReservations();RevealChangedReservation(current.Id,enable);
-        }catch(Exception e){MessageBox.Show(this,e.Message,"予約の切替");}finally{_changingReservation=false;}
+        }catch(Exception e){Log("予約の切替: "+e);LoadNativeReservations();MessageBox.Show(this,e is HttpRequestException or TaskCanceledException?"TVRockの編集画面を読み込めませんでした。少し待ってから、もう一度クリックしてください。":e.Message,"予約の切替");}finally{_changingReservation=false;}
     }
 }
