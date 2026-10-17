@@ -1,4 +1,4 @@
-# TVRock Zoo Ver.1.0.3
+# TVRock Zoo Ver.1.0.4
 
 TVRockの予約一覧・番組表・自動検索予約を、軽快な専用画面で操作するWindows向け非公式ツールです。録画は既存のTVRockが担当します。
 

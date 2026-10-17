@@ -38,7 +38,7 @@ internal sealed partial class MainForm
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.1.0.3";
+        Text="TVRock Zoo — 予約・番組表 Ver.1.0.4";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;

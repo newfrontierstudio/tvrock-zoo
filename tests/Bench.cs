@@ -73,6 +73,14 @@ static class Bench
                 button.Size=new Size(180,42);Check(button.Region!.IsVisible(175,20)&&!button.Region.IsVisible(179,0),"Rounded button region follows resized bounds");
                 int clicked=0;button.Click+=(_,_)=>clicked++;button.PerformClick();Check(clicked==1,"Rounded button retains normal click behavior");
             }
+            using(var tabs=new FlatTabControl{Size=new Size(920,140),DrawMode=TabDrawMode.OwnerDrawFixed,SizeMode=TabSizeMode.Fixed,ItemSize=new Size(170,35)})using(var image=new Bitmap(920,140)){
+                foreach(string name in new[]{"予約一覧  ▼","番組表・検索","自動検索予約","詳細設定","HELP"})tabs.TabPages.Add(new TabPage(name){BackColor=Color.White});
+                tabs.DrawItem+=(_,e)=>{var rect=e.Bounds;rect.Inflate(-3,-3);using var path=RoundedControls.Shape(rect,4);using var fill=new SolidBrush(e.Index==tabs.SelectedIndex?Color.FromArgb(29,91,160):Color.FromArgb(232,238,245));e.Graphics.SmoothingMode=System.Drawing.Drawing2D.SmoothingMode.AntiAlias;e.Graphics.FillPath(fill,path);TextRenderer.DrawText(e.Graphics,tabs.TabPages[e.Index].Text,tabs.Font,rect,e.Index==tabs.SelectedIndex?Color.White:Color.FromArgb(23,42,62),TextFormatFlags.VerticalCenter|TextFormatFlags.HorizontalCenter);};
+                tabs.CreateControl();tabs.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));
+                var inactive=tabs.GetTabRect(1);Check(image.GetPixel(inactive.Right-2,inactive.Top+4).ToArgb()==Color.White.ToArgb(),"Inactive tab has no native vertical edge");
+                tabs.SelectedIndex=1;Check(tabs.SelectedIndex==1,"Custom-painted tabs remain selectable");
+                if(args.Length>2)image.Save(args[2],System.Drawing.Imaging.ImageFormat.Png);
+            }
             var measurements=new List<object>();
             measurements.Add(Time("rank-3000-programs-127-preferences",5,()=>{var ranker=new Ranker(tastes);foreach(var s in shows)ranker.Score(s);}));
             string fixture=Path.GetTempFileName();

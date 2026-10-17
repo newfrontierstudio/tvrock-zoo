@@ -59,6 +59,17 @@ internal sealed partial class MainForm
 }
 internal sealed class FlatTabControl:TabControl
 {
+    internal FlatTabControl(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.ResizeRedraw,true);}
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.Clear(Parent?.BackColor??Color.White);
+        for(int i=0;i<TabCount;i++){
+            var bounds=GetTabRect(i);if(!bounds.IntersectsWith(e.ClipRectangle))continue;
+            OnDrawItem(new DrawItemEventArgs(e.Graphics,Font,bounds,i,i==SelectedIndex?DrawItemState.Selected:DrawItemState.Default));
+        }
+    }
+    protected override void OnSelectedIndexChanged(EventArgs e){base.OnSelectedIndexChanged(e);Invalidate();}
+
     public override Rectangle DisplayRectangle {
         get{var area=base.DisplayRectangle;int top=Math.Max(0,area.Top-3);return new Rectangle(0,top,ClientSize.Width,Math.Max(0,ClientSize.Height-top));}
     }
