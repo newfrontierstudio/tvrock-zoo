@@ -26,13 +26,14 @@ internal sealed partial class MainForm
     string _nativeGuideStamp = "";
     bool _guideRefreshing;
     string _reservationReadStamp = "";
+    string _reservationDisplayStamp="";
     DateTimeOffset _nextReservationBoundary=DateTimeOffset.MaxValue;
     DateTimeOffset _nextGuideAttempt = DateTimeOffset.Now.AddSeconds(45);
     static readonly JsonSerializerOptions NativeJson = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, WriteIndented = true };
     internal sealed record KeywordEntry(int Order,string Id,bool Enabled,string Title,string Detail,string Stations,string Days,string Hours);
     internal sealed record AiEntry(string ReservationId,string ProgramTitle,string SearchWord,string Reason,DateTimeOffset Start,string Station);
     sealed record GuideCache(DateTimeOffset Fetched,List<Show> Shows);
-    static DataGridView NativeGrid() => new() { Dock=DockStyle.Fill, ReadOnly=true, AllowUserToAddRows=false, AllowUserToDeleteRows=false, RowHeadersVisible=false, AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.None, SelectionMode=DataGridViewSelectionMode.FullRowSelect, MultiSelect=false, BackgroundColor=Color.White, BorderStyle=BorderStyle.None, AutoGenerateColumns=false, AllowUserToResizeRows=false, ColumnHeadersHeight=32, ColumnHeadersHeightSizeMode=DataGridViewColumnHeadersHeightSizeMode.DisableResizing, RowTemplate={Height=29}, ShowCellToolTips=true };
+    static DataGridView NativeGrid() => new StableGrid() { Dock=DockStyle.Fill, ReadOnly=true, AllowUserToAddRows=false, AllowUserToDeleteRows=false, RowHeadersVisible=false, AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.None, SelectionMode=DataGridViewSelectionMode.FullRowSelect, MultiSelect=false, BackgroundColor=Color.White, BorderStyle=BorderStyle.None, AutoGenerateColumns=false, AllowUserToResizeRows=false, ColumnHeadersHeight=32, ColumnHeadersHeightSizeMode=DataGridViewColumnHeadersHeightSizeMode.DisableResizing, RowTemplate={Height=29}, ShowCellToolTips=true };
     static void Col(DataGridView g,string name,string title,int width,bool fill=false) { var c=new DataGridViewTextBoxColumn { Name=name,HeaderText=title,Width=width,SortMode=DataGridViewColumnSortMode.Programmatic }; if(fill){c.AutoSizeMode=DataGridViewAutoSizeColumnMode.Fill;c.MinimumWidth=220;}g.Columns.Add(c); }
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
@@ -85,7 +86,7 @@ internal sealed partial class MainForm
         foreach(var grid in new[]{_nativeReservations,_disabledReservations,_nativeGuide,_nativeKeywords})grid.CellFormatting+=(_,e)=>{if(e.ColumnIndex>=0&&grid.Columns[e.ColumnIndex].Name=="station"&&e.Value is string text)e.Value=text.Replace("MX1","MX");};
         _nativeStation.FormattingEnabled=true;
         _nativeStation.Format+=(_,e)=>{if(e.ListItem is string text)e.Value=text.Replace("MX1","MX");};
-        _nativeTimer.Tick+=async(_,_)=>{if(ReservationStamp()!=_reservationReadStamp||DateTimeOffset.Now>=_nextReservationBoundary)LoadNativeReservations();if(DateTimeOffset.Now>=_nextGuideAttempt&&!_guideRefreshing){_nextGuideAttempt=DateTimeOffset.Now.AddMinutes(30);await RefreshNativeGuide();}};_nativeTimer.Start();
+        _nativeTimer.Tick+=async(_,_)=>{if(ReservationStamp()!=_reservationReadStamp)LoadNativeReservations(false);RefreshReservationClock(DateTimeOffset.Now);if(DateTimeOffset.Now>=_nextGuideAttempt&&!_guideRefreshing){_nextGuideAttempt=DateTimeOffset.Now.AddMinutes(30);await RefreshNativeGuide();}};_nativeTimer.Start();
     }
     static readonly Dictionary<DataGridView,(int Column,bool Desc)> NativeSort=[];
     static void SortNativeGrid(DataGridView grid,int index)
@@ -110,14 +111,17 @@ internal sealed partial class MainForm
     }
     internal static bool IsAiBooking(Booking booking,AiEntry ai) => booking.Id==ai.ReservationId && booking.Station==ai.Station && Math.Abs((booking.Start-ai.Start).TotalSeconds)<90;
     static string ReservationStamp()=>string.Join("/",new[]{Path.Combine(RockFolder,"tvrock.sch"),Path.Combine(RecommendationHome,"ai-recommendations.json")}.Select(p=>File.Exists(p)?File.GetLastWriteTimeUtc(p).Ticks:0));
-    void LoadNativeReservations()
+    void LoadNativeReservations(bool force=true)
     {
         if(_nativeReservations.Columns.Count==0)return;
         try {
             string? selected=(_nativeReservations.CurrentRow?.Tag as Booking)?.Id;
             int first=Math.Max(0,_nativeReservations.FirstDisplayedScrollingRowIndex);
+            string? firstId=first<_nativeReservations.Rows.Count?(_nativeReservations.Rows[first].Tag as Booking)?.Id:null;
             _nativeBookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));
             var file=Path.Combine(RecommendationHome,"ai-recommendations.json");_nativeAi=File.Exists(file)?JsonSerializer.Deserialize<List<AiEntry>>(File.ReadAllText(file),NativeJson)??[]:[];
+            string displayStamp=ReservationDisplayFingerprint(_nativeBookings,_nativeAi);
+            if(!force&&displayStamp==_reservationDisplayStamp){_reservationReadStamp=ReservationStamp();return;}
             _nativeReservations.Rows.Clear();
             foreach(var b in ReservationRows(_nativeBookings,_mergeReservations,_includeFinishedBookings.Checked,DateTimeOffset.Now)){
                 var ai=_nativeAi.FirstOrDefault(a=>IsAiBooking(b,a));string key=b.Fields.GetValueOrDefault("SEARCHID","");var keyword=_nativeKeys.FirstOrDefault(k=>k.Id==key);
@@ -129,11 +133,12 @@ internal sealed partial class MainForm
                 if(b.Id==selected){row.Selected=true;_nativeReservations.CurrentCell=row.Cells[1];}
             }
             if(NativeSort.TryGetValue(_nativeReservations,out var sort))_nativeReservations.Sort(new NativeRowComparer(sort.Column,sort.Desc));
-            if(_nativeReservations.IsHandleCreated&&_nativeReservations.Visible&&_nativeReservations.DisplayedRowCount(false)>0&&_nativeReservations.Rows.Count>first)_nativeReservations.FirstDisplayedScrollingRowIndex=first;
+            var anchor=_nativeReservations.Rows.Cast<DataGridViewRow>().FirstOrDefault(row=>row.Tag is Booking booking&&booking.Id==firstId);
+            if(_nativeReservations.IsHandleCreated&&_nativeReservations.Visible&&_nativeReservations.DisplayedRowCount(false)>0&&_nativeReservations.Rows.Count>0)_nativeReservations.FirstDisplayedScrollingRowIndex=anchor?.Index??Math.Min(first,_nativeReservations.Rows.Count-1);
             if(selected==null)ClearReservationSelection(_nativeReservations);
             ApplyDatePartitions(_nativeReservations);
             LoadDisabledReservations();
-            _reservationReadStamp=ReservationStamp();
+            _reservationReadStamp=ReservationStamp();_reservationDisplayStamp=displayStamp;
             _nextReservationBoundary=NextReservationBoundary(_nativeBookings,DateTimeOffset.Now);
             _engineStatus.Text=$"予約 {_nativeReservations.Rows.Count}件 / 録画: TVRock";
         }catch(IOException e){_engineStatus.Text="予約の再読込待ち: "+e.Message;}catch(JsonException e){_engineStatus.Text="おすすめ記録の読込失敗: "+e.Message;}

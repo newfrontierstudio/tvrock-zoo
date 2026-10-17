@@ -3,7 +3,7 @@ namespace TsScheduler;
 internal sealed partial class MainForm
 {
     bool _fittingReservationColumns;
-    readonly System.Windows.Forms.Timer _recordingTintTimer=new(){Interval=1000};
+    readonly Dictionary<DataGridView,Dictionary<string,bool>> _recordingStates=[];
     internal static bool IsRecordingWindow(Booking booking,DateTimeOffset now)=>booking.Enabled&&booking.Start<=now&&booking.End>now;
     internal static DateTimeOffset NextReservationBoundary(IEnumerable<Booking> bookings,DateTimeOffset now)=>bookings.SelectMany(b=>new[]{b.Start,b.End}).Where(time=>time>now).DefaultIfEmpty(DateTimeOffset.MaxValue).Min();
     void InitializeReservationPresentation()
@@ -20,8 +20,26 @@ internal sealed partial class MainForm
             };
             FitReservationColumns(grid);
         }
-        _recordingTintTimer.Tick+=(_,_)=>_nativeReservations.Invalidate();_recordingTintTimer.Start();
-        Disposed+=(_,_)=>_recordingTintTimer.Dispose();
+
+    }
+    internal static string ReservationDisplayFingerprint(IEnumerable<Booking> bookings,IEnumerable<AiEntry> recommendations)=>System.Text.Json.JsonSerializer.Serialize(new{Bookings=bookings.OrderBy(b=>b.Id).Select(b=>new{b.Id,b.Title,b.Station,b.ServiceId,b.EventId,b.Start,b.End,b.Device,b.Enabled,Search=b.Fields.GetValueOrDefault("SEARCHID","")}),Recommendations=recommendations.OrderBy(a=>a.ReservationId)});
+    internal int RefreshReservationClock(DateTimeOffset now)
+    {
+        int changed=0;
+        foreach(var grid in new[]{_nativeReservations,_disabledReservations}){
+            if(!_recordingStates.TryGetValue(grid,out var states))_recordingStates[grid]=states=[];
+            bool removed=false;
+            foreach(var row in grid.Rows.Cast<DataGridViewRow>().ToArray()){
+                if(row.Tag is not Booking booking)continue;
+                if(!_includeFinishedBookings.Checked&&booking.End<=now){states.Remove(booking.Id);grid.Rows.Remove(row);removed=true;changed++;continue;}
+                bool recording=IsRecordingWindow(booking,now);
+                if(!states.TryGetValue(booking.Id,out bool previous)||previous!=recording){states[booking.Id]=recording;grid.InvalidateRow(row.Index);changed++;}
+            }
+            var ids=grid.Rows.Cast<DataGridViewRow>().Select(row=>(row.Tag as Booking)?.Id).ToHashSet();
+            foreach(var id in states.Keys.Where(id=>!ids.Contains(id)).ToArray())states.Remove(id);
+            if(removed){ApplyDatePartitions(grid);UpdateDisabledCaption();_engineStatus.Text=$"予約 {_nativeReservations.Rows.Count}件 / 録画: TVRock";}
+        }
+        return changed;
     }
     void FitReservationColumns(DataGridView grid)
     {

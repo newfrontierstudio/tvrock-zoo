@@ -44,6 +44,14 @@ static class Bench
                 var caption=(Button)Field("_foldDisabled");var panel=(Panel)Field("_disabledBox");var split=(SplitContainer)Field("_reservationSplit");
                 foreach(float size in new[]{10f,18f,24f}){using var font=new Font("Meiryo UI",size);caption.Font=font;panel.PerformLayout();Check(caption.Height>=caption.Font.Height+8,"Disabled caption must fit enlarged font");}
                 Check(((System.Windows.Forms.Timer)Field("_nativeTimer")).Interval==1000,"Reservation file changes checked every second");
+                var reservations=(DataGridView)Field("_nativeReservations");
+                int rowIndex=reservations.Rows.Add("○",running.Start.LocalDateTime,3,"NHK","manual","test");var original=reservations.Rows[rowIndex];original.Tag=running;
+                form.RefreshReservationClock(now);Check(form.RefreshReservationClock(now.AddSeconds(1))==0,"Unchanged clock tick must not repaint rows");
+                Check(ReferenceEquals(original,reservations.Rows[0]),"Clock update preserves the row instance");
+                Check(form.RefreshReservationClock(running.End)>0&&reservations.Rows.Count==0,"Recording expiration updates without rebuilding live rows");
+                var touched=running with{Fields=new(){{"IGNORED_WRITE_METADATA","changed"}}};
+                Check(MainForm.ReservationDisplayFingerprint(new[]{running},Array.Empty<MainForm.AiEntry>())==MainForm.ReservationDisplayFingerprint(new[]{touched},Array.Empty<MainForm.AiEntry>()),"Metadata-only file writes do not rebuild the view");
+                Check(MainForm.ReservationDisplayFingerprint(new[]{running},Array.Empty<MainForm.AiEntry>())!=MainForm.ReservationDisplayFingerprint(new[]{running with{Enabled=false}},Array.Empty<MainForm.AiEntry>()),"Real reservation state change still refreshes view");
             }
             var tastes=Enumerable.Range(0,127).Select(i=>new Taste("工場見学 金属部品 職人の技術 "+i,1)).ToList();
             string[] stationNames={"NHK","日テレ","テレ朝","TBS","テレ東","フジ","Eテレ","MX"};
