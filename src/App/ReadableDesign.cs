@@ -71,9 +71,10 @@ internal sealed partial class MainForm
     }
     internal static Color StationColor(string station)
     {
-        double hue=station switch {"NHK"=>20,"日テレ"=>75,"テレ朝"=>305,"TBS"=>260,"テレ東"=>175,"フジ"=>50,"Eテレ"=>125,"MX1" or "MX"=>220,_=>-1};if(hue<0)return Ink;
-        // Equal perceptual lightness and chroma in CIELAB; only hue varies.
-        double angle=hue*Math.PI/180,fy=(48d+16)/116,fx=fy+28*Math.Cos(angle)/500,fz=fy-28*Math.Sin(angle)/200;
+        double hue=station switch {"NHK"=>20,"日テレ"=>85,"テレ朝"=>315,"TBS"=>270,"テレ東"=>180,"フジ"=>55,"Eテレ"=>140,"MX1" or "MX"=>230,_=>-1};if(hue<0)return Ink;
+        // CIELAB lightness stays equal. Stronger green/violet separation; red chroma is reduced to balance visual prominence.
+        double chroma=station=="NHK"?23:38;
+        double angle=hue*Math.PI/180,fy=(48d+16)/116,fx=fy+chroma*Math.Cos(angle)/500,fz=fy-chroma*Math.Sin(angle)/200;
         static double Inv(double t)=>t>6d/29?t*t*t:3*Math.Pow(6d/29,2)*(t-4d/29);
         double x=.95047*Inv(fx),y=Inv(fy),z=1.08883*Inv(fz);
         static int Srgb(double c){double value=c<=.0031308?12.92*c:1.055*Math.Pow(c,1/2.4)-.055;return (int)Math.Round(Math.Clamp(value,0,1)*255);}
