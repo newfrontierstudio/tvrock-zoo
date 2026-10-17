@@ -41,10 +41,12 @@ internal sealed partial class MainForm
     }
     void LoadDisabledReservations()
     {
-        if(_disabledReservations.Columns.Count==0)return;_disabledReservations.Rows.Clear();
+        if(_disabledReservations.Columns.Count==0)return;string? selected=(_disabledReservations.CurrentRow?.Tag as Booking)?.Id;_disabledReservations.Rows.Clear();
         foreach(var b in _nativeBookings.Where(b=>!b.Enabled&&(_includeFinishedBookings.Checked||b.End>DateTimeOffset.Now)).OrderBy(b=>b.Start)){
             int i=_disabledReservations.Rows.Add("×",b.Start.LocalDateTime,(int)Math.Round((b.End-b.Start).TotalMinutes),b.Station,"",b.Title);var row=_disabledReservations.Rows[i];row.Tag=b;row.Cells[1].Style.Format="MM/dd(ddd) HH:mm";row.Cells[2].Style.Format="0分";row.Cells[3].Style.ForeColor=StationColor(b.Station);
         }
+        var selectedRow=_disabledReservations.Rows.Cast<DataGridViewRow>().FirstOrDefault(r=>r.Tag is Booking b&&b.Id==selected);
+        if(selectedRow==null)ClearReservationSelection(_disabledReservations);else{_disabledReservations.CurrentCell=selectedRow.Cells["title"];selectedRow.Selected=true;}
         UpdateDisabledCaption();
     }
     void RevealChangedReservation(string id,bool enabled)
