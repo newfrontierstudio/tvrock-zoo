@@ -36,7 +36,7 @@ internal sealed partial class MainForm
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.1.0";
+        Text="TVRock Zoo — 予約・番組表 Ver.1.0.1";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;
@@ -56,14 +56,14 @@ internal sealed partial class MainForm
         _nativeStation.Items.Add("全局");_nativeStation.SelectedIndex=0;
         var search=new Button{Text="検索",AutoSize=true};search.Click+=(_,_)=>RenderNativeGuide();
         var update=new Button{Text="番組表を取得",AutoSize=true};update.Click+=async(_,_)=>await RefreshNativeGuide();
-        var book=new Button{Text="選択番組を予約",AutoSize=true};book.Click+=async(_,_)=>await NativeBookShow();
+        var book=new Button{Text="選択番組を予約",AutoSize=true};book.Click+=async(_,_)=>{book.Enabled=false;try{await NativeBookShow();}finally{book.Enabled=true;}};
         searchbar.Controls.AddRange([_nativeQuery,_nativeStation,search,_includePast,update,book]);
         _nativeQuery.KeyDown+=(_,e)=>{if(e.KeyCode==Keys.Enter){e.SuppressKeyPress=true;RenderNativeGuide();}};
         _nativeStation.SelectedIndexChanged+=(_,_)=>RenderNativeGuide();_includePast.CheckedChanged+=(_,_)=>RenderNativeGuide();
         var statusbar=new FlowLayoutPanel{Dock=DockStyle.Bottom,AutoSize=true};statusbar.Controls.Add(_nativeStatus);
         guidePage.Controls.Add(_nativeGuide);guidePage.Controls.Add(searchbar);guidePage.Controls.Add(statusbar);
         Col(_nativeGuide,"start","開始日時",210);Col(_nativeGuide,"end","終了",80);Col(_nativeGuide,"station","局",80);Col(_nativeGuide,"booked","予約",80);Col(_nativeGuide,"title","番組名（再放送等のマークを含む）",600,true);
-        _nativeGuide.CellDoubleClick+=(_,e)=>{if(e.RowIndex>=0&&_nativeGuide.Rows[e.RowIndex].Tag is Show s)MessageBox.Show(this,s.Description,s.Title);};
+        _nativeGuide.CellDoubleClick+=async(_,e)=>{if(e.RowIndex>=0&&_nativeGuide.Rows[e.RowIndex].Tag is Show s)await NativeBookShow(s);};
         var keybar=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(4)};
         var keySearch=new Button{Text="検索ワードで探す",AutoSize=true};keySearch.Click+=(_,_)=>SearchNativeKeyword();
         var keyEdit=new Button{Text="条件を編集",AutoSize=true};keyEdit.Click+=async(_,_)=>{if(_nativeKeywords.CurrentRow?.Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
@@ -201,15 +201,19 @@ internal sealed partial class MainForm
         if(_nativeReservations.CurrentRow?.Tag is not Booking b)return;
         await OpenNativeLegacy("reg?i="+Uri.EscapeDataString(b.Id));
     }
-    async Task NativeBookShow()
+    bool _manualBookingBusy;
+    async Task NativeBookShow(Show? selected=null)
     {
-        Show? s=_schedule.Visible?_schedule.Selected:_nativeGuide.CurrentRow?.Tag as Show;if(s==null){MessageBox.Show(this,"予約する番組をクリックして選択してください。");return;}
+        if(_manualBookingBusy){_nativeStatus.Text="予約を処理中です。しばらくお待ちください。";return;}
+        _manualBookingBusy=true;
+        try{
+        Show? s=selected??(_schedule.Visible?_schedule.Selected:_nativeGuide.CurrentRow?.Tag as Show);if(s==null){MessageBox.Show(this,"予約する番組をクリックして選択してください。");return;}
         if(s.Start<DateTimeOffset.Now.AddMinutes(2)){MessageBox.Show(this,"開始済み、または開始直前の番組です。番組表を更新してください。");return;}
         var bookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));if(bookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))){MessageBox.Show(this,"この放送は予約済みです。");return;}
         var tuners=Data.Tuners(Path.Combine(RockFolder,"dtv.ini")).Tuners;int? device=Planner.FreeDevice(s,tuners,bookings.Where(b=>b.Enabled).ToList(),[]);
         if(device==null){MessageBox.Show(this,"空きチューナーがありません。");return;}
         if(!s.Actions.TryGetValue(device.Value,out string? action)){MessageBox.Show(this,"予約リンクがありません。番組表を更新してください。");return;}
-        try{
+        _nativeStatus.Text="予約を確認中："+s.Title;UseWaitCursor=true;
             // Verify the live guide's event and time before using a cached action.
             int offset=(int)Math.Floor((s.Start-new DateTimeOffset(DateTimeOffset.Now.AddHours(-4).Date,DateTimeOffset.Now.Offset).AddHours(4)).TotalHours/6)*6;
             if(offset<0||offset>=192)throw new InvalidOperationException("番組表を更新してください。");
@@ -218,7 +222,8 @@ internal sealed partial class MainForm
             var q=Data.Query(action);if(q.GetValueOrDefault("c")!=s.ServiceId.ToString()||q.GetValueOrDefault("e")!=s.EventId.ToString()||q.GetValueOrDefault("d")!=device.ToString()||q.GetValueOrDefault("r")!="1")throw new InvalidDataException("予約リンクの照合に失敗しました。");
             bookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));if(bookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))||Planner.FreeDevice(s,tuners,bookings.Where(b=>b.Enabled).ToList(),[])!=device)throw new InvalidOperationException("予約状況が変わりました。一覧を更新してください。");
             string backup=Path.Combine(RecommendationHome,"manual-history",DateTime.Now.ToString("yyyyMMdd-HHmmssfff"));Directory.CreateDirectory(backup);File.Copy(Path.Combine(RockFolder,"tvrock.sch"),Path.Combine(backup,"tvrock-before.sch"));
-            await NativeGet(action);await Task.Delay(500);var after=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));if(!after.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b)))throw new InvalidOperationException("反映を確認できません。再試行する前に予約一覧をご確認ください。");LoadNativeReservations();RenderNativeGuide();MessageBox.Show(this,"予約しました。",s.Title);
-        }catch(Exception e){MessageBox.Show(this,e.Message,"予約を完了できませんでした");}
+            _nativeStatus.Text="TVRockへ予約を送信中："+s.Title;
+            await NativeGet(action);bool applied=false;for(int attempt=0;attempt<20;attempt++){await Task.Delay(250);var after=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));if(after.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))){applied=true;break;}}if(!applied)throw new InvalidOperationException("予約を送信しましたが、反映を確認できません。再試行する前に予約一覧をご確認ください。");LoadNativeReservations();RenderNativeGuide();_nativeStatus.Text="予約しました："+s.Title;MessageBox.Show(this,"予約しました。",s.Title);
+        }catch(Exception e){_nativeStatus.Text="予約を完了できませんでした："+e.Message;MessageBox.Show(this,e.Message,"予約を完了できませんでした");}finally{_manualBookingBusy=false;UseWaitCursor=false;}
     }
 }

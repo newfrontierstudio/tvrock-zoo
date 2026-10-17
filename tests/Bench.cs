@@ -26,6 +26,10 @@ static class Bench
             Check(MainForm.KeywordTextCandidate(candidateKey,shows[0]),"Keyword candidate matches title/detail/station/day");
             Check(!MainForm.KeywordTextCandidate(candidateKey,shows[0] with{Title="工場PR"}),"Keyword candidate excludes NOT term");
             Check(!MainForm.KeywordTextCandidate(candidateKey,shows[0] with{Station="別局"}),"Keyword candidate excludes different station");
+            Check(MainForm.KeywordTextCandidate(candidateKey with{Stations="テレビ朝日"},shows[0] with{Station="テレ朝"}),"TV Asahi aliases match");
+            Check(!Data.SameStation("BS朝日","テレビ朝日"),"BS Asahi remains separate");
+            string stationFixture=Path.GetTempFileName();
+            try{File.WriteAllText(stationFixture,"[TUNER1]\nAPPNAME1=TVTest.exe\n[TUNER1 SERVICE]\nNHK=1024\n[TUNER2]\nAPPNAME1=\n[TUNER2 SERVICE]\nテレビ朝日=1064\n",Data.Cp932);var parsed=Data.Tuners(stationFixture);Check(parsed.Stations.ContainsKey(1064),"Guide stations include configured services on inactive tuners");Check(parsed.Tuners.Count==1,"Inactive tuner is not usable for recording");}finally{File.Delete(stationFixture);}
             string switchHome=Path.Combine(Path.GetTempPath(),"zoo-switch-"+Guid.NewGuid());
             try{RecommendationSwitch.Save(switchHome,false);Check(File.Exists(Path.Combine(switchHome,"recommend-disabled.txt")),"Recommendation OFF persisted");RecommendationSwitch.Save(switchHome,true);Check(!File.Exists(Path.Combine(switchHome,"recommend-disabled.txt")),"Recommendation ON persisted");}finally{if(Directory.Exists(switchHome))Directory.Delete(switchHome);}
             var tastes=Enumerable.Range(0,127).Select(i=>new Taste("工場見学 金属部品 職人の技術 "+i,1)).ToList();

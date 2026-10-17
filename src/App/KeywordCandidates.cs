@@ -5,7 +5,7 @@ internal sealed partial class MainForm
     // A cached text search is advisory; TVRock remains authoritative for all reservation conditions.
     internal static bool KeywordTextCandidate(KeywordEntry key, Show show)
     {
-        if (key.Stations.Length > 0 && !key.Stations.Split(" / ").Contains(show.Station)) return false;
+        if (key.Stations.Length > 0 && !key.Stations.Split(" / ").Any(station=>Data.SameStation(station,show.Station))) return false;
         if (key.Days.Length > 0 && !key.Days.Contains("日月火水木金土"[(int)show.Start.DayOfWeek])) return false;
         if (!MatchesQuery(show,key.Title)) return false;
         return MatchesQuery(show with { Title=show.Description },key.Detail);

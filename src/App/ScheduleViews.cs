@@ -19,6 +19,7 @@ internal sealed partial class MainForm
         prev.Click+=(_,_)=>_scheduleDate.Value=_scheduleDate.Value.AddDays(-1);next.Click+=(_,_)=>_scheduleDate.Value=_scheduleDate.Value.AddDays(1);
         _scheduleDate.ValueChanged+=(_,_)=>RenderSchedule();_showGuideList.CheckedChanged+=(_,_)=>RenderSchedule();
         _schedule.StationInk=StationColor;
+        _schedule.BookShow=async s=>await NativeBookShow(s);
         _schedule.SelectShow=s=>_nativeStatus.Text=s.Start.ToLocalTime().ToString("MM/dd HH:mm")+" "+s.Station+" "+s.Title;
         _schedule.HoverShow=(s,p)=>{if(s==null)HideLargeTip();else QueueLargeTip(_schedule,string.IsNullOrWhiteSpace(s.Description)?"番組説明が未取得です。番組表を更新してください。":s.Description,p);};
         _nativeReservations.Tag="date-partitions";_nativeGuide.Tag="date-partitions";
