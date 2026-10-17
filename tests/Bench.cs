@@ -20,6 +20,12 @@ static class Bench
             Check(RuntimeConfiguration.NormalizeUrl("http://remote.invalid:8969/test/")=="http://remote.invalid:8969/test/","Remote host must not become localhost");
             Check(typeof(RuntimeConfiguration).GetProperty("ExcludeNhkPromos")==null,"Personal PR setting remains");
             using(var setup=new SetupDialog()){Check(!Descendants(setup).Any(c=>c.Text.Contains("PR予約")),"PR checkbox remains");}
+            var imported=ConsultPreferences.Parse("```json\n{\"include\":[\"旅行\",\"旅行\"],\"exclude\":[\"通販\"]}\n```");
+            Check(imported.Include.Length==1&&imported.AddTo([]).Single().Text=="旅行","Consult import and dedup");
+            var consultShow=new Show("consult",1,1,"NHK","旅行の案内","通販の紹介",DateTimeOffset.Now.AddHours(1),DateTimeOffset.Now.AddHours(2),[]);
+            Check(!imported.Allows(consultShow)&&imported.Allows(consultShow with {Description="旅の紹介"}),"Imported exclusion applies to description");
+            foreach(var bad in new[]{"{}","{\"include\":[],\"exclude\":[]}","{\"include\":[\"旅\"],\"exclude\":[],\"execute\":\"bad\"}"}){bool rejected=false;try{ConsultPreferences.Parse(bad);}catch{rejected=true;}Check(rejected,"Malformed consultation accepted");}
+            var consultTemp=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString());imported.Save(consultTemp);Check(ConsultPreferences.Load(consultTemp).Exclude.Single()=="通販","Consult persistence");File.Delete(Path.Combine(consultTemp,"consult-preferences.json"));Directory.Delete(consultTemp);
             var day=new DateTimeOffset(DateTime.Today,TimeSpan.FromHours(9));
             var shows=Enumerable.Range(0,3000).Select(i=>new Show("show"+i,1+i%8,i,"局"+(i%8),"工場見学 金属部品の秘密 "+i,"職人の技術と工場の新しい挑戦を紹介します。",day.AddMinutes((i/8)*30),day.AddMinutes((i/8)*30+30),new(){{5,"day?r=1&c=1&e="+i+"&d=5"}}){GenreColor="#ffdddd"}).ToList();
             var candidateKey=new MainForm.KeywordEntry(1,"test",true,"工場 not PR","職人","局0","日月火水木金土","");
@@ -112,3 +118,4 @@ static class Bench
     }
     static IEnumerable<Control> Descendants(Control c)=>c.Controls.Cast<Control>().SelectMany(x=>new[]{x}.Concat(Descendants(x)));
 }
+

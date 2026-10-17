@@ -1,4 +1,4 @@
-﻿namespace TsScheduler;
+namespace TsScheduler;
 internal sealed partial class MainForm
 {
     internal const string SupportNoteUrl="https://note.com/discreet/n/n3e2ee058b3bd";
@@ -27,12 +27,15 @@ internal sealed partial class MainForm
 ふだんはこれでOK。ChatGPTの準備は要りません。
 今すぐ選ぶときは「おすすめ更新」。自動実行は3日ごとに最大20件で、初期状態はOFFです。
 OFFにしても予約済みの番組は残ります。太字・斜体がおすすめ予約です。");
-        TextBlock(@"② もっと好みに合わせたいならChatGPT（任意）",true);
-        TextBlock(@"好きな番組や避けたい内容をChatGPTに伝え、検索条件を考えてもらいます。
-例：「街歩き番組が好き。通販は避けたい。TVRock用の検索ワードと除外条件を考えて」
-提案された条件を、Zooの「自動検索予約」→対象行をダブルクリックして入力します。
-設定した条件が、番組探しやおすすめの参考になります。
-相談しただけではZooに反映されません。ChatGPTとは自動連携していないため、条件は自分で入力してください。");
+        TextBlock(@"② ChatGPTで、もっと好みに合わせる（任意）",true);
+        TextBlock(@"1. 「自動検索予約」の「好みを相談」を押します。相談文がコピーされ、ChatGPTが開きます。
+2. ChatGPTに貼り付けて送信し、好きな番組・避けたい内容を答えます。
+3. 最後の回答をコピーして、Zooの「回答を取り込む」を押します。
+4. 「内容を確認」で好きな内容・除外する内容を確認し、適用します。
+次のおすすめ選びから好みを使います。今すぐ選ぶには「おすすめ更新」を押してください。
+ChatGPTはブラウザーで使えます。アプリのインストールやAPIキーの設定は不要です。
+ChatGPTへの送信と回答のコピーは自分で行います。Zooから予約履歴などは送信しません。
+取り込んだ条件はZooのおすすめ専用です。TVRockの検索条件・既存予約は変わりません。");
         TextBlock(@"表示と更新",true);
         TextBlock(@"「文字 −／＋」で一覧の文字サイズを調整。列幅と表示位置は保存されます。
 予約の変更確認と録画時間の表示は1秒ごと。終了した番組は一覧から自動で外れます。手動更新は「一覧を更新」です。");
@@ -81,3 +84,4 @@ internal sealed class FlatTabControl:TabControl
         get{var area=base.DisplayRectangle;int top=Math.Max(0,area.Top-3);return new Rectangle(0,top,ClientSize.Width,Math.Max(0,ClientSize.Height-top));}
     }
 }
+
