@@ -1,5 +1,26 @@
 (() => {
   if (!['/user/kwl', '/user/kws', '/user/reg'].includes(location.pathname)) return;
+  if (document.body.textContent.includes('この自動検索予約を削除してよろしいですか？')) {
+    for (const form of document.forms) {
+      if (!form.querySelector('input[type="hidden"][name="i"]') || form.dataset.zooConfirmation) continue;
+      form.dataset.zooConfirmation='1';
+      form.addEventListener('submit', event => {
+        if(form.dataset.zooSending){event.preventDefault();return;}
+        const choice=event.submitter;
+        if (!choice || !['はい','いいえ'].includes(choice.value.trim())) return;
+        event.preventDefault();
+        if(form.dataset.zooSending) return;
+        if(choice.value.trim()==='いいえ'){location.href='kwl';return;}
+        const fields={};
+        for(const input of form.querySelectorAll('input[type="hidden"][name]')) fields[input.name]=input.value;
+        fields[choice.name]=choice.value;
+        form.dataset.zooSending='1';
+        for(const button of form.querySelectorAll('input[type="submit"]'))button.disabled=true;
+        choice.value='削除を確認中…';
+        window.chrome.webview.postMessage({type:'zoo-keyword-delete',fields});
+      });
+    }
+  }
   if (document.getElementById('ts-reservation-ui')) return;
   const style = document.createElement('style');
   style.id = 'ts-reservation-ui';

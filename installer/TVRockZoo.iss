@@ -1,7 +1,7 @@
 [Setup]
 AppId={{632AF8C7-589A-433F-93CF-5AF286F6DFE6}
 AppName=TVRock Zoo
-AppVersion=0.1.6
+AppVersion=0.1.7
 AppPublisher=newfrontierstudio
 AppPublisherURL=https://github.com/newfrontierstudio/tvrock-zoo
 DefaultDirName={localappdata}\Programs\TVRockZoo
@@ -11,7 +11,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 OutputDir=..\artifacts
-OutputBaseFilename=TVRockZoo-0.1.6-Setup-x64
+OutputBaseFilename=TVRockZoo-0.1.7-Setup-x64
 SetupIconFile=..\src\App\app.ico
 UninstallDisplayIcon={app}\TVRockZoo.exe
 Compression=lzma2

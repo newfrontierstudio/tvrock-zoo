@@ -9,6 +9,7 @@ internal sealed partial class MainForm
     void InitializeReservationSwitches(TabPage page)
     {
         _includeDisabled.Visible=false;
+        InitializeReservationPresentation();
         InstallReservationHover(_nativeReservations,false);InstallReservationHover(_disabledReservations,true);
         foreach(DataGridViewColumn c in _nativeReservations.Columns)_disabledReservations.Columns.Add((DataGridViewColumn)c.Clone());
         _disabledReservations.DefaultCellStyle=_nativeReservations.DefaultCellStyle.Clone();_disabledReservations.ColumnHeadersDefaultCellStyle=_nativeReservations.ColumnHeadersDefaultCellStyle.Clone();_disabledReservations.EnableHeadersVisualStyles=false;
@@ -60,7 +61,6 @@ internal sealed partial class MainForm
         if(_changingReservation)return;_changingReservation=true;
         try{
             var current=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==booking.Id&&b.Start==booking.Start&&Data.Norm(b.Title)==Data.Norm(booking.Title));if(current==null)throw new IOException("予約が更新されています。一覧を更新してください。");if(current.Enabled==enable){LoadNativeReservations();RevealChangedReservation(current.Id,enable);return;}
-            if(current.Start<DateTimeOffset.Now.AddMinutes(2)&&current.End>DateTimeOffset.Now)throw new InvalidOperationException("開始直前・録画中の予約です。TVRockの詳細画面から操作してください。");
             string folder=Path.Combine(RecommendationHome,"reservation-changes",DateTime.Now.ToString("yyyyMMdd-HHmmssfff"));Directory.CreateDirectory(folder);File.Copy(Path.Combine(RockFolder,"tvrock.sch"),Path.Combine(folder,"before.sch"));
             string html=await NativeGet("reg?i="+current.Id);File.WriteAllText(Path.Combine(folder,"before.html"),html);var fields=Data.Form(html,"予約を変更");if(fields.GetValueOrDefault("i")!=current.Id||Data.Norm(fields.GetValueOrDefault("title",""))!=Data.Norm(current.Title))throw new InvalidDataException("予約フォームの照合に失敗しました。");
             if(enable)fields["valid"]="true";else fields.Remove("valid");
