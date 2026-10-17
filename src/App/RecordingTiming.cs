@@ -57,7 +57,7 @@ internal sealed partial class MainForm
     {
         try{_timingSettings=TimingSettings.Load(TimingFile);}catch(Exception error)when(error is IOException or JsonException){Log("録画時間設定: "+error.Message);}
         foreach(var grid in new[]{_nativeReservations,_disabledReservations}){
-            var menu=new ContextMenuStrip();var edit=new ToolStripMenuItem("録画時間を調整（頭・尻）…");menu.Items.Add(edit);Booking? target=null;
+            var menu=new ContextMenuStrip();var edit=new ToolStripMenuItem("録画の開始・終了を調整…");menu.Items.Add(edit);Booking? target=null;
             grid.CellMouseDown+=(_,e)=>{if(e.Button!=MouseButtons.Right)return;target=null;if(e.RowIndex<0)return;target=grid.Rows[e.RowIndex].Tag as Booking;grid.ClearSelection();grid.Rows[e.RowIndex].Selected=true;grid.CurrentCell=grid.Rows[e.RowIndex].Cells["title"];};
             menu.Opening+=(_,e)=>{if(target==null)e.Cancel=true;};edit.Click+=async(_,_)=>{if(target!=null)await ShowRecordingTiming(target);};grid.ContextMenuStrip=menu;
             Disposed+=(_,_)=>menu.Dispose();
@@ -72,18 +72,18 @@ internal sealed partial class MainForm
         if(_timingBusy||_changingReservation)return;
         booking=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(value=>value.Id==booking.Id)??booking;
         var current=RecordingTiming.Current(booking);var existing=_timingSettings.Rules.LastOrDefault(rule=>TimingSettings.Matches(rule,booking));
-        using var dialog=new Form{Text="録画時間を調整",ClientSize=new Size(620,400),Font=Font,StartPosition=FormStartPosition.CenterParent,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,MinimizeBox=false};
+        using var dialog=new Form{Text="録画の開始・終了を調整",ClientSize=new Size(620,400),Font=Font,StartPosition=FormStartPosition.CenterParent,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,MinimizeBox=false};
         var panel=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(18),ColumnCount=2,RowCount=8};panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,160));panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));dialog.Controls.Add(panel);
         var title=new Label{Text=booking.Station+"  "+booking.Title,AutoSize=true,MaximumSize=new Size(570,0)};panel.Controls.Add(title,0,0);panel.SetColumnSpan(title,2);
         var head=new NumericUpDown{Minimum=-3600,Maximum=3600,Value=Math.Clamp(current.Head,-3600,3600),Width=120};var tail=new NumericUpDown{Minimum=-3600,Maximum=3600,Value=Math.Clamp(current.Tail,-3600,3600),Width=120};
-        panel.Controls.Add(new Label{Text="頭（−で早く開始）",AutoSize=true},0,1);panel.Controls.Add(head,1,1);panel.Controls.Add(new Label{Text="尻（＋で延長）",AutoSize=true},0,2);panel.Controls.Add(tail,1,2);
+        panel.Controls.Add(new Label{Text="開始：−で早く／＋で遅く",AutoSize=true},0,1);panel.Controls.Add(head,1,1);panel.Controls.Add(new Label{Text="終了：−で短縮／＋で延長",AutoSize=true},0,2);panel.Controls.Add(tail,1,2);
         var note=new Label{Text="秒単位。番組の時刻を基準に上書きします（加算しません）。常時適用はZoo起動中に動作します。",AutoSize=true,MaximumSize=new Size(570,0)};panel.Controls.Add(note,0,3);panel.SetColumnSpan(note,2);
         var always=new CheckBox{Text="この番組は今後も常に（既存予約にも適用）",Checked=existing!=null,AutoSize=true};panel.Controls.Add(always,0,4);panel.SetColumnSpan(always,2);
         var series=new TextBox{Text=existing?.Series??TimingSeries(booking.Title),Dock=DockStyle.Fill,Enabled=always.Checked};panel.Controls.Add(new Label{Text="同じ局・番組名の先頭一致",AutoSize=true},0,5);panel.Controls.Add(series,1,5);
         var preview=new Label{AutoSize=true,MaximumSize=new Size(570,0)};panel.Controls.Add(preview,0,6);panel.SetColumnSpan(preview,2);
         var buttons=new FlowLayoutPanel{AutoSize=true,Dock=DockStyle.Fill};var apply=new Button{Text="適用",AutoSize=true};var cancel=new Button{Text="キャンセル",AutoSize=true,DialogResult=DialogResult.Cancel};buttons.Controls.AddRange([apply,cancel]);
         if(existing!=null){var remove=new Button{Text="この常時設定を解除",AutoSize=true};buttons.Controls.Add(remove);remove.Click+=(_,_)=>{dialog.DialogResult=DialogResult.Yes;dialog.Close();};}panel.Controls.Add(buttons,0,7);panel.SetColumnSpan(buttons,2);dialog.CancelButton=cancel;
-        void Preview(){series.Enabled=always.Checked;apply.Enabled=!always.Checked||Data.Norm(series.Text).Length>0;var rule=new TimingRule(booking.Station,series.Text,(int)head.Value,(int)tail.Value);int count=always.Checked?_nativeBookings.Count(value=>value.End>DateTimeOffset.Now&&TimingSettings.Matches(rule,value)):1;preview.Text=$"適用対象 {count}件（録画しない予約も含む）／ 頭 {(int)head.Value:+0;-0;0}秒・尻 {(int)tail.Value:+0;-0;0}秒／録画予定 {booking.Start.AddSeconds((int)head.Value):MM/dd HH:mm:ss} ～ {booking.End.AddSeconds((int)tail.Value):HH:mm:ss}";}
+        void Preview(){series.Enabled=always.Checked;apply.Enabled=!always.Checked||Data.Norm(series.Text).Length>0;var rule=new TimingRule(booking.Station,series.Text,(int)head.Value,(int)tail.Value);int count=always.Checked?_nativeBookings.Count(value=>value.End>DateTimeOffset.Now&&TimingSettings.Matches(rule,value)):1;preview.Text=$"適用対象 {count}件（録画しない予約も含む）／ 開始 {(int)head.Value:+0;-0;0}秒・終了 {(int)tail.Value:+0;-0;0}秒／録画予定 {booking.Start.AddSeconds((int)head.Value):MM/dd HH:mm:ss} ～ {booking.End.AddSeconds((int)tail.Value):HH:mm:ss}";}
         always.CheckedChanged+=(_,_)=>Preview();series.TextChanged+=(_,_)=>Preview();head.ValueChanged+=(_,_)=>Preview();tail.ValueChanged+=(_,_)=>Preview();Preview();StyleControls(dialog);apply.Click+=(_,_)=>{if(always.Checked&&Data.Norm(series.Text).Length==0)return;dialog.DialogResult=DialogResult.OK;dialog.Close();};
         var result=dialog.ShowDialog(this);
         if(result==DialogResult.Yes&&existing!=null){try{_timingSettings.Rules.Remove(existing);_timingSettings.Save(TimingFile);_timingFailed=false;_engineStatus.Text="この番組の常時設定を解除しました";}catch(IOException error){MessageBox.Show(this,error.Message);}return;}

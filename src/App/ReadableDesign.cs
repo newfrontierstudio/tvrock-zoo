@@ -110,7 +110,7 @@ internal sealed partial class MainForm
         if(show!=null||grid==_nativeReservations){
             var parts=new List<string>();
             parts.Add(!string.IsNullOrWhiteSpace(show?.Description)?show.Description:"番組説明を取得できていません。番組表を更新してください。");
-            if(row.Tag is TsRecommend.Booking timed){var margins=RecordingTiming.Current(timed);parts.Add($"録画時間：頭 {margins.Head:+0;-0;0}秒・尻 {margins.Tail:+0;-0;0}秒");}
+            if(row.Tag is TsRecommend.Booking timed){var margins=RecordingTiming.Current(timed);parts.Add($"録画時間：開始 {margins.Head:+0;-0;0}秒・終了 {margins.Tail:+0;-0;0}秒");}
             if(ai!=null)parts.Add("AIおすすめの理由\n"+ai.Reason);
             if(!string.IsNullOrWhiteSpace(word)&&word!="手動")parts.Add("検索ワード："+word);
             return string.Join("\n\n",parts);
