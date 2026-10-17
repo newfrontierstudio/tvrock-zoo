@@ -46,6 +46,20 @@ static class Bench
                 Check(((System.Windows.Forms.Timer)Field("_nativeTimer")).Interval==1000,"Reservation file changes checked every second");
             }
             var tastes=Enumerable.Range(0,127).Select(i=>new Taste("工場見学 金属部品 職人の技術 "+i,1)).ToList();
+            string[] stationNames={"NHK","日テレ","テレ朝","TBS","テレ東","フジ","Eテレ","MX"};
+            using(var badgeImage=new Bitmap(760,294))using(var graphics=Graphics.FromImage(badgeImage))using(var rowFont=new Font("Meiryo UI",10)){
+                graphics.Clear(Color.White);
+                for(int i=0;i<stationNames.Length;i++){
+                    int y=38+i*29;var bounds=new Rectangle(210,y,78,29);var fill=StationBadgeRenderer.Background(stationNames[i]);Check(fill.R>210&&fill.G>210&&fill.B>210,"Station background should remain subtle");
+                    using(var row=new SolidBrush(i%2==0?Color.White:Color.FromArgb(245,248,252)))graphics.FillRectangle(row,0,y,760,29);
+                    TextRenderer.DrawText(graphics,"10/17(土) 18:00   30分",rowFont,new Rectangle(8,y,196,29),Color.FromArgb(23,42,62),TextFormatFlags.VerticalCenter);
+                    int width=StationBadgeRenderer.Draw(graphics,stationNames[i],rowFont,bounds);Check(width>0&&width<=bounds.Width,"Station badge fits within unchanged row and column");
+                    TextRenderer.DrawText(graphics,new[]{"経済バックヤード","バラエティ特番","ドラえもん","報道特集","街歩きの旅","MUSIC FAIR","デザインあneo","探偵！ナイトスクープ"}[i],rowFont,new Rectangle(300,y,452,29),Color.FromArgb(23,42,62),TextFormatFlags.VerticalCenter);
+                }
+                using(var heading=new SolidBrush(Color.FromArgb(230,237,246)))graphics.FillRectangle(heading,0,0,760,34);
+                TextRenderer.DrawText(graphics,"開始日時                 長さ       局          番組名",rowFont,new Rectangle(8,0,744,34),Color.FromArgb(23,42,62),TextFormatFlags.VerticalCenter);
+                if(args.Length>1)badgeImage.Save(args[1],System.Drawing.Imaging.ImageFormat.Png);
+            }
             var measurements=new List<object>();
             measurements.Add(Time("rank-3000-programs-127-preferences",5,()=>{var ranker=new Ranker(tastes);foreach(var s in shows)ranker.Score(s);}));
             string fixture=Path.GetTempFileName();

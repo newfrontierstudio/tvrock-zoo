@@ -60,7 +60,7 @@ internal sealed partial class MainForm
     {
         if(e.RowIndex<0||e.ColumnIndex!=4)return;e.PaintBackground(e.ClipBounds,true);int x=e.CellBounds.Left+6;
         if(Convert.ToString(e.FormattedValue)!.Split(" / ").Length>=6){TextRenderer.DrawText(e.Graphics!,"全局",e.CellStyle!.Font,e.CellBounds,Ink,TextFormatFlags.VerticalCenter|TextFormatFlags.Left);e.Handled=true;return;}
-        foreach(string station in Convert.ToString(e.FormattedValue)!.Split(" / ")){var size=TextRenderer.MeasureText(station,e.CellStyle!.Font);if(x+size.Width>e.CellBounds.Right-4)break;TextRenderer.DrawText(e.Graphics,station,e.CellStyle.Font,new Rectangle(x,e.CellBounds.Top,size.Width,e.CellBounds.Height),StationColor(station),TextFormatFlags.VerticalCenter|TextFormatFlags.Left);x+=size.Width+8;}
+        var state=e.Graphics!.Save();e.Graphics.SetClip(e.ClipBounds);try{foreach(string station in Convert.ToString(e.FormattedValue)!.Split(" / ")){if(x>=e.CellBounds.Right-10)break;int width=StationBadgeRenderer.Draw(e.Graphics,station,e.CellStyle!.Font??_nativeKeywords.Font,new Rectangle(x,e.CellBounds.Top+2,e.CellBounds.Right-x-4,e.CellBounds.Height-4));x+=width+4;}}finally{e.Graphics.Restore(state);}
         e.Paint(e.ClipBounds,DataGridViewPaintParts.Border);e.Handled=true;
     }
 }

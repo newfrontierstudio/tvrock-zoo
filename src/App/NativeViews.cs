@@ -37,7 +37,7 @@ internal sealed partial class MainForm
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.1.0.2";
+        Text="TVRock Zoo — 予約・番組表 Ver.1.0.3";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;
@@ -79,6 +79,7 @@ internal sealed partial class MainForm
         _nativeKeywords.Columns["hours"].Visible=false;
         InitializeScheduleViews(guidePage);
         InitializeReservationSwitches(listPage);
+        InitializeStationBadges();
         InitializeWorkspacePreferences(toolbar,listPage);
         _nativeKeywords.Columns["enabled"].Visible=false;
         foreach(var grid in new[]{_nativeReservations,_disabledReservations,_nativeGuide,_nativeKeywords})grid.CellFormatting+=(_,e)=>{if(e.ColumnIndex>=0&&grid.Columns[e.ColumnIndex].Name=="station"&&e.Value is string text)e.Value=text.Replace("MX1","MX");};
