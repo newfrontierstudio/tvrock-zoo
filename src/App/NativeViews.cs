@@ -17,7 +17,7 @@ internal sealed partial class MainForm
     readonly CheckBox _includeDisabled = new() { Text = "無効予約も表示", AutoSize = true };
     readonly CheckBox _includeFinishedBookings = new() { Text = "終了分も表示", AutoSize = true };
     readonly Label _nativeStatus = new() { AutoSize = true, Padding = new Padding(4,8,0,0) };
-    readonly System.Windows.Forms.Timer _nativeTimer = new() { Interval = 15000 };
+    readonly System.Windows.Forms.Timer _nativeTimer = new() { Interval = 1000 };
     List<Show> _nativeShows = [];
     List<KeywordEntry> _nativeKeys = [];
     List<Booking> _nativeBookings = [];
@@ -26,6 +26,7 @@ internal sealed partial class MainForm
     string _nativeGuideStamp = "";
     bool _guideRefreshing;
     string _reservationReadStamp = "";
+    DateTimeOffset _nextReservationBoundary=DateTimeOffset.MaxValue;
     DateTimeOffset _nextGuideAttempt = DateTimeOffset.Now.AddSeconds(45);
     static readonly JsonSerializerOptions NativeJson = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, WriteIndented = true };
     internal sealed record KeywordEntry(int Order,string Id,bool Enabled,string Title,string Detail,string Stations,string Days,string Hours);
@@ -36,7 +37,7 @@ internal sealed partial class MainForm
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.1.0.1";
+        Text="TVRock Zoo — 予約・番組表 Ver.1.0.2";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;
@@ -83,7 +84,7 @@ internal sealed partial class MainForm
         foreach(var grid in new[]{_nativeReservations,_disabledReservations,_nativeGuide,_nativeKeywords})grid.CellFormatting+=(_,e)=>{if(e.ColumnIndex>=0&&grid.Columns[e.ColumnIndex].Name=="station"&&e.Value is string text)e.Value=text.Replace("MX1","MX");};
         _nativeStation.FormattingEnabled=true;
         _nativeStation.Format+=(_,e)=>{if(e.ListItem is string text)e.Value=text.Replace("MX1","MX");};
-        _nativeTimer.Tick+=async(_,_)=>{if(ReservationStamp()!=_reservationReadStamp)LoadNativeReservations();if(DateTimeOffset.Now>=_nextGuideAttempt&&!_guideRefreshing){_nextGuideAttempt=DateTimeOffset.Now.AddMinutes(30);await RefreshNativeGuide();}};_nativeTimer.Start();
+        _nativeTimer.Tick+=async(_,_)=>{if(ReservationStamp()!=_reservationReadStamp||DateTimeOffset.Now>=_nextReservationBoundary)LoadNativeReservations();if(DateTimeOffset.Now>=_nextGuideAttempt&&!_guideRefreshing){_nextGuideAttempt=DateTimeOffset.Now.AddMinutes(30);await RefreshNativeGuide();}};_nativeTimer.Start();
     }
     static readonly Dictionary<DataGridView,(int Column,bool Desc)> NativeSort=[];
     static void SortNativeGrid(DataGridView grid,int index)
@@ -132,6 +133,7 @@ internal sealed partial class MainForm
             ApplyDatePartitions(_nativeReservations);
             LoadDisabledReservations();
             _reservationReadStamp=ReservationStamp();
+            _nextReservationBoundary=NextReservationBoundary(_nativeBookings,DateTimeOffset.Now);
             _engineStatus.Text=$"予約 {_nativeReservations.Rows.Count}件 / 録画: TVRock";
         }catch(IOException e){_engineStatus.Text="予約の再読込待ち: "+e.Message;}catch(JsonException e){_engineStatus.Text="おすすめ記録の読込失敗: "+e.Message;}
     }

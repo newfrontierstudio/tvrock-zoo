@@ -5,6 +5,7 @@ internal sealed partial class MainForm
     bool _fittingReservationColumns;
     readonly System.Windows.Forms.Timer _recordingTintTimer=new(){Interval=1000};
     internal static bool IsRecordingWindow(Booking booking,DateTimeOffset now)=>booking.Enabled&&booking.Start<=now&&booking.End>now;
+    internal static DateTimeOffset NextReservationBoundary(IEnumerable<Booking> bookings,DateTimeOffset now)=>bookings.SelectMany(b=>new[]{b.Start,b.End}).Where(time=>time>now).DefaultIfEmpty(DateTimeOffset.MaxValue).Min();
     void InitializeReservationPresentation()
     {
         foreach(var grid in new[]{_nativeReservations,_disabledReservations})

@@ -32,6 +32,19 @@ static class Bench
             try{File.WriteAllText(stationFixture,"[TUNER1]\nAPPNAME1=TVTest.exe\n[TUNER1 SERVICE]\nNHK=1024\n[TUNER2]\nAPPNAME1=\n[TUNER2 SERVICE]\nテレビ朝日=1064\n",Data.Cp932);var parsed=Data.Tuners(stationFixture);Check(parsed.Stations.ContainsKey(1064),"Guide stations include configured services on inactive tuners");Check(parsed.Tuners.Count==1,"Inactive tuner is not usable for recording");}finally{File.Delete(stationFixture);}
             string switchHome=Path.Combine(Path.GetTempPath(),"zoo-switch-"+Guid.NewGuid());
             try{RecommendationSwitch.Save(switchHome,false);Check(File.Exists(Path.Combine(switchHome,"recommend-disabled.txt")),"Recommendation OFF persisted");RecommendationSwitch.Save(switchHome,true);Check(!File.Exists(Path.Combine(switchHome,"recommend-disabled.txt")),"Recommendation ON persisted");}finally{if(Directory.Exists(switchHome))Directory.Delete(switchHome);}
+            var now=day.AddHours(12);
+            var running=new Booking("running","test","NHK",1,1,now.AddMinutes(-1),now.AddSeconds(2),5,true,true,false,new());
+            var upcoming=running with{Id="next",Start=now.AddSeconds(5),End=now.AddMinutes(30)};
+            Check(MainForm.NextReservationBoundary(new[]{running,upcoming},now)==running.End,"Recording end triggers refresh without a file change");
+            Check(MainForm.NextReservationBoundary(new[]{running,upcoming},running.End)==upcoming.Start,"Next start remains scheduled after recording ends");
+            Check(!MainForm.ReservationRows(new[]{running},false,false,running.End).Any(),"Ended recording leaves active list at end boundary");
+            Check(MainForm.NextReservationBoundary(new[]{running},running.End)==DateTimeOffset.MaxValue,"Expired bookings do not cause continuous reloads");
+            using(var form=new MainForm(false)){
+                object Field(string name)=>typeof(MainForm).GetField(name,BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(form)!;
+                var caption=(Button)Field("_foldDisabled");var panel=(Panel)Field("_disabledBox");var split=(SplitContainer)Field("_reservationSplit");
+                foreach(float size in new[]{10f,18f,24f}){using var font=new Font("Meiryo UI",size);caption.Font=font;panel.PerformLayout();Check(caption.Height>=caption.Font.Height+8,"Disabled caption must fit enlarged font");}
+                Check(((System.Windows.Forms.Timer)Field("_nativeTimer")).Interval==1000,"Reservation file changes checked every second");
+            }
             var tastes=Enumerable.Range(0,127).Select(i=>new Taste("工場見学 金属部品 職人の技術 "+i,1)).ToList();
             var measurements=new List<object>();
             measurements.Add(Time("rank-3000-programs-127-preferences",5,()=>{var ranker=new Ranker(tastes);foreach(var s in shows)ranker.Score(s);}));

@@ -28,7 +28,7 @@ internal sealed partial class MainForm
 提案された条件をZooの「自動検索予約」で設定してください。現在は手動での反映です。");
         TextBlock(@"表示と更新",true);
         TextBlock(@"「文字 −／＋」で一覧の文字サイズを調整。列幅と表示位置は保存されます。
-予約の変更確認は15秒ごと、録画時間の色判定は1秒ごと。手動更新は「一覧を更新」です。");
+予約の変更確認と録画時間の表示は1秒ごと。終了した番組は一覧から自動で外れます。手動更新は「一覧を更新」です。");
         TextBlock(@"開発を応援する",true);
         TextBlock(@"気に入っていただけたら、コーヒー代で開発継続を応援していただけると嬉しいです。");
         var support=new Button{Text="☕ 開発を応援する（note）",AutoSize=true,Margin=new Padding(0,6,0,6)};body.Controls.Add(support);StyleControls(support);

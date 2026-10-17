@@ -20,7 +20,9 @@ internal sealed partial class MainForm
     void InitializeWorkspacePreferences(FlowLayoutPanel toolbar,TabPage page)
     {
         toolbar.Controls.Add(_undoButton);StyleControls(_undoButton);_undoButton.Click+=async(_,_)=>await UndoReservationChange();
-        _disabledBox.Text="";_disabledBox.Controls.Clear();var box=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2};box.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));box.RowStyles.Add(new RowStyle(SizeType.Absolute,28));box.RowStyles.Add(new RowStyle(SizeType.Percent,100));box.Controls.Add(_foldDisabled,0,0);box.Controls.Add(_disabledReservations,0,1);_disabledBox.Controls.Add(box);StyleControls(_foldDisabled);_foldDisabled.Padding=new Padding(2);_foldDisabled.MinimumSize=Size.Empty;_foldDisabled.Margin=Padding.Empty;
+        _disabledBox.Text="";_disabledBox.Controls.Clear();var box=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2};box.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));box.RowStyles.Add(new RowStyle(SizeType.Absolute,DisabledCaptionHeight));box.RowStyles.Add(new RowStyle(SizeType.Percent,100));box.Controls.Add(_foldDisabled,0,0);box.Controls.Add(_disabledReservations,0,1);_disabledBox.Controls.Add(box);StyleControls(_foldDisabled);_foldDisabled.Padding=new Padding(2);_foldDisabled.MinimumSize=Size.Empty;_foldDisabled.Margin=Padding.Empty;_foldDisabled.AutoSize=false;_foldDisabled.AutoEllipsis=true;
+        void FitCaption(){box.RowStyles[0].Height=DisabledCaptionHeight;ApplyReservationSplit();box.PerformLayout();}
+        _foldDisabled.FontChanged+=(_,_)=>FitCaption();DpiChanged+=(_,_)=>FitCaption();FitCaption();
         _foldDisabled.Click+=(_,_)=>{SetDisabledCollapsed(!_disabledCollapsed);QueueLayoutSave();};
         foreach(var item in LayoutGrids()){
             var grid=item.Grid;grid.AllowUserToResizeColumns=true;
@@ -32,12 +34,14 @@ internal sealed partial class MainForm
         Shown+=(_,_)=>BeginInvoke(new Action(()=>{RestoreWorkspaceLayout();_layoutReady=true;}));
         SetDisabledCollapsed(false);
     }
+    int DisabledCaptionHeight=>Math.Max((int)Math.Ceiling(32*DeviceDpi/96d),_foldDisabled.Font.Height+(int)Math.Ceiling(12*DeviceDpi/96d));
     void SetDisabledCollapsed(bool collapsed){_disabledCollapsed=collapsed;_disabledReservations.Visible=!collapsed;ApplyReservationSplit();UpdateDisabledCaption();}
     void ApplyReservationSplit()
     {
         if(_reservationSplit.Panel2Collapsed)return;
         int available=_reservationSplit.ClientSize.Height-_reservationSplit.SplitterWidth;if(available<100)return;
-        int bottom=Math.Clamp(_disabledCollapsed?44:_disabledExpandedHeight,32,available-60);
+        int minimum=DisabledCaptionHeight+(_disabledCollapsed?0:_disabledReservations.ColumnHeadersHeight+24);
+        int bottom=Math.Clamp(_disabledCollapsed?DisabledCaptionHeight:_disabledExpandedHeight,Math.Min(minimum,available-60),available-60);
         _applyingReservationSplit=true;try{_reservationSplit.SplitterDistance=available-bottom;}finally{_applyingReservationSplit=false;}
     }
     void UpdateDisabledCaption(){_disabledBox.Text="";_foldDisabled.Text=$"{(_disabledCollapsed?"▸":"▾")} 録画しない {_disabledReservations.Rows.Count}件"+(_disabledCollapsed?" — クリックで開く":" — ×で復活・クリックで折りたたむ");}

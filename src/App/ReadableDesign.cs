@@ -4,7 +4,8 @@ internal sealed partial class MainForm
 {
     readonly ToolTip _largeTip = new() { OwnerDraw=true,UseAnimation=false,UseFading=false,AutoPopDelay=25000,ShowAlways=true };
     readonly System.Windows.Forms.Timer _hoverDelay = new() { Interval=450 };
-    readonly Font _hoverFont = new("Meiryo UI",12,FontStyle.Regular);
+    readonly Font _hoverFont = new("Meiryo UI",10.8f,FontStyle.Regular);
+    readonly Font _hoverKeywordFont = new("Meiryo UI",12,FontStyle.Bold);
     Control? _hoverControl;
     string _hoverText="";
     Point _hoverPoint;
@@ -49,18 +50,38 @@ internal sealed partial class MainForm
         }
         _largeTip.Popup+=(_,e)=>{
             using var graphics=e.AssociatedControl.CreateGraphics();int width=Math.Min((int)(680*DeviceDpi/96f),Screen.FromControl(this).WorkingArea.Width-60);
-            var measured=graphics.MeasureString(_largeTip.GetToolTip(e.AssociatedControl),_hoverFont,width-36);
-            e.ToolTipSize=new Size(Math.Min(width,(int)Math.Ceiling(measured.Width)+36),(int)Math.Ceiling(measured.Height)+32);
+            var measured=LayoutHoverText(graphics,_largeTip.GetToolTip(e.AssociatedControl),_hoverFont,_hoverKeywordFont,width-36,PointF.Empty);
+            int actualWidth=Math.Min(width,Math.Max(100,(int)Math.Ceiling(measured.Width)+40));
+            measured=LayoutHoverText(graphics,_largeTip.GetToolTip(e.AssociatedControl),_hoverFont,_hoverKeywordFont,actualWidth-36,PointF.Empty);
+            e.ToolTipSize=new Size(actualWidth,(int)Math.Ceiling(measured.Height)+32);
         };
         _largeTip.Draw+=(_,e)=>{
             using var background=new SolidBrush(Color.FromArgb(255,253,240));using var border=new Pen(Color.FromArgb(91,113,139));using var ink=new SolidBrush(Ink);
             e.Graphics.FillRectangle(background,e.Bounds);e.Graphics.DrawRectangle(border,0,0,e.Bounds.Width-1,e.Bounds.Height-1);
             e.Graphics.TextRenderingHint=System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            e.Graphics.DrawString(e.ToolTipText,_hoverFont,ink,new RectangleF(18,14,e.Bounds.Width-36,e.Bounds.Height-28));
+            LayoutHoverText(e.Graphics,e.ToolTipText,_hoverFont,_hoverKeywordFont,e.Bounds.Width-36,new PointF(18,14),ink);
         };
         _hoverDelay.Tick+=(_,_)=>{_hoverDelay.Stop();if(_hoverControl==null||_hoverText.Length==0)return;_largeTip.SetToolTip(_hoverControl,_hoverText);_largeTip.Show(_hoverText,_hoverControl,new Point(_hoverPoint.X+14,_hoverPoint.Y+26),25000);};
         _tabs.SelectedIndexChanged+=(_,_)=>HideLargeTip();Deactivate+=(_,_)=>HideLargeTip();
         ApplyReadingSize(_readingSize,false);
+    }
+    internal static SizeF LayoutHoverText(Graphics graphics,string text,Font body,Font keyword,float width,PointF origin,Brush? ink=null)
+    {
+        width=Math.Max(40,width);float y=0,maxWidth=0;
+        foreach(string line in text.Replace("\r","").Split('\n')){
+            const string label="検索ワード：";
+            if(line.StartsWith(label,StringComparison.Ordinal)){
+                float prefix=Math.Min(width-20,graphics.MeasureString(label,body).Width);
+                string word=line[label.Length..].TrimStart();var measured=graphics.MeasureString(word.Length==0?" ":word,keyword,(int)Math.Max(20,width-prefix));
+                if(ink!=null){graphics.DrawString(label,body,ink,new PointF(origin.X,origin.Y+y));graphics.DrawString(word,keyword,ink,new RectangleF(origin.X+prefix,origin.Y+y,width-prefix,measured.Height+2));}
+                maxWidth=Math.Max(maxWidth,prefix+measured.Width);y+=Math.Max(body.GetHeight(graphics),measured.Height);
+            }else{
+                var measured=graphics.MeasureString(line.Length==0?" ":line,body,(int)width);
+                if(ink!=null)graphics.DrawString(line,body,ink,new RectangleF(origin.X,origin.Y+y,width,measured.Height+2));
+                maxWidth=Math.Max(maxWidth,measured.Width);y+=measured.Height;
+            }
+        }
+        return new SizeF(Math.Min(width,maxWidth),y);
     }
     void StyleControls(Control root)
     {
@@ -113,5 +134,5 @@ internal sealed partial class MainForm
         if(save){Directory.CreateDirectory(RecommendationHome);File.WriteAllText(Path.Combine(RecommendationHome,"reading-size.txt"),_readingSize.ToString());}
         Invalidate(true);
     }
-    void DisposeReadableDesign(){HideLargeTip();_hoverDelay.Dispose();_largeTip.Dispose();_hoverFont.Dispose();foreach(var font in _readingFonts)font.Dispose();}
+    void DisposeReadableDesign(){HideLargeTip();_hoverDelay.Dispose();_largeTip.Dispose();_hoverFont.Dispose();_hoverKeywordFont.Dispose();foreach(var font in _readingFonts)font.Dispose();}
 }
