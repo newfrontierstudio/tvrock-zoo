@@ -5,7 +5,7 @@ internal sealed partial class MainForm
     internal static Rectangle ReservationArrowBounds(Rectangle tab,int dpi)=>new(tab.Right-(int)(32*dpi/96f),tab.Top,(int)(32*dpi/96f),tab.Height);
     bool _mergeReservations;
     readonly ToolStripMenuItem _splitViewItem=new("上下に分けて表示");
-    readonly ToolStripMenuItem _mergedViewItem=new("日時順にまとめて表示（○・×）");
+    readonly ToolStripMenuItem _mergedViewItem=new("録画しない予約も一緒に表示");
     void InitializeReservationViewMenu()
     {
         var menu=new ContextMenuStrip();menu.Items.AddRange([_splitViewItem,_mergedViewItem]);
