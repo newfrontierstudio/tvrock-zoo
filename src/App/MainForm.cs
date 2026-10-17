@@ -29,6 +29,7 @@ internal sealed partial class MainForm : Form
     private bool _exitRequested;
     private readonly bool _startInTray;
     private readonly Button _recommend = new() { Text = "おすすめ更新", AutoSize = true };
+    private readonly CheckBox _recommendToggle = new() { Appearance = Appearance.Button, AutoSize = true, Cursor = Cursors.Hand, AccessibleName = "自動おすすめ予約の切り替え" };
     private readonly ToolTip _recommendTip = new();
     private readonly System.Windows.Forms.Timer _recommendTimer = new() { Interval = 30000 };
     private string _lastRecommendationStamp = "";
@@ -37,13 +38,13 @@ internal sealed partial class MainForm : Form
     public MainForm(bool startInTray)
     {
         _startInTray = startInTray;
-        Text = "TVRock Zoo — 予約・番組表 Ver.0.1.5";
+        Text = "TVRock Zoo — 予約・番組表 Ver.0.1.6";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(1080, 700);
         MinimumSize = new Size(780, 520);
 
         var toolbar = new FlowLayoutPanel { Dock = DockStyle.Top, MinimumSize = new Size(0,48), Padding = new Padding(10, 8, 10, 8), AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
-        toolbar.Controls.AddRange([_openWeb, _webAddress, _import, _editReservation, _scheduler, _recommend, _engineStatus]);
+        toolbar.Controls.AddRange([_openWeb, _webAddress, _import, _editReservation, _scheduler, _recommend, _recommendToggle, _engineStatus]);
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(10) };
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 32));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 43));
@@ -90,7 +91,12 @@ internal sealed partial class MainForm : Form
     {
         var menu = new ContextMenuStrip();
         var enabled = new ToolStripMenuItem("3日ごとの自動おすすめ予約") { CheckOnClick = true, Checked = !File.Exists(Path.Combine(RecommendationHome, "recommend-disabled.txt")) };
-        enabled.CheckedChanged += (_, _) => { Directory.CreateDirectory(RecommendationHome); var flag = Path.Combine(RecommendationHome,"recommend-disabled.txt"); if(enabled.Checked) File.Delete(flag); else File.WriteAllText(flag,"off"); };
+        _recommendToggle.Checked = enabled.Checked;
+        void ShowMode() { _recommendToggle.Text = "自動おすすめ予約 " + (enabled.Checked ? "ON" : "OFF"); _recommendToggle.BackColor = enabled.Checked ? Color.FromArgb(218,238,228) : Color.FromArgb(231,238,247); _recommendTip.SetToolTip(_recommendToggle,"検索条件・予約履歴からPC内で選定し、3日ごとに最大20件を予約。OFFでも既存の予約は残ります。ChatGPTの設定ではありません。"); }
+        bool restoringMode = false;
+        enabled.CheckedChanged += (_, _) => { if(restoringMode) return; try { RecommendationSwitch.Save(RecommendationHome,enabled.Checked); } catch(Exception error) { MessageBox.Show(this,error.Message,"おすすめ設定を保存できません"); restoringMode = true; enabled.Checked = !enabled.Checked; _recommendToggle.Checked = enabled.Checked; restoringMode = false; return; } _recommendToggle.Checked = enabled.Checked; ShowMode(); };
+        _recommendToggle.CheckedChanged += (_, _) => { if(enabled.Checked != _recommendToggle.Checked) enabled.Checked = _recommendToggle.Checked; };
+        Shown += (_, _) => ShowMode(); ShowMode();
         menu.Items.Add(enabled);
         menu.Items.Add("接続設定", null, (_, _) => { using var dialog = new SetupDialog(); if(dialog.ShowDialog(this)==DialogResult.OK) MessageBox.Show(this,"設定を保存しました。アプリを終了して起動し直してください。","接続設定"); });
         menu.Items.Add("おすすめの履歴", null, (_, _) => { Directory.CreateDirectory(Path.Combine(RecommendationHome,"recommend-history")); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.Combine(RecommendationHome,"recommend-history")){UseShellExecute=true}); });

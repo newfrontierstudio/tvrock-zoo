@@ -16,10 +16,18 @@ static class Bench
         try {
             ApplicationConfiguration.Initialize();Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             Check(RuntimeConfiguration.NormalizeUrl("http://localhost:8969/test/list?x=1")=="http://localhost:8969/test/","URL normalization");
+            Check(RuntimeConfiguration.NormalizeUrl($"http://{Environment.MachineName}:8969/test/list")=="http://127.0.0.1:8969/test/","Local computer URL normalization");
+            Check(RuntimeConfiguration.NormalizeUrl("http://remote.invalid:8969/test/")=="http://remote.invalid:8969/test/","Remote host must not become localhost");
             Check(typeof(RuntimeConfiguration).GetProperty("ExcludeNhkPromos")==null,"Personal PR setting remains");
             using(var setup=new SetupDialog()){Check(!Descendants(setup).Any(c=>c.Text.Contains("PR予約")),"PR checkbox remains");}
             var day=new DateTimeOffset(DateTime.Today,TimeSpan.FromHours(9));
             var shows=Enumerable.Range(0,3000).Select(i=>new Show("show"+i,1+i%8,i,"局"+(i%8),"工場見学 金属部品の秘密 "+i,"職人の技術と工場の新しい挑戦を紹介します。",day.AddMinutes((i/8)*30),day.AddMinutes((i/8)*30+30),new(){{5,"day?r=1&c=1&e="+i+"&d=5"}}){GenreColor="#ffdddd"}).ToList();
+            var candidateKey=new MainForm.KeywordEntry(1,"test",true,"工場 not PR","職人","局0","日月火水木金土","");
+            Check(MainForm.KeywordTextCandidate(candidateKey,shows[0]),"Keyword candidate matches title/detail/station/day");
+            Check(!MainForm.KeywordTextCandidate(candidateKey,shows[0] with{Title="工場PR"}),"Keyword candidate excludes NOT term");
+            Check(!MainForm.KeywordTextCandidate(candidateKey,shows[0] with{Station="別局"}),"Keyword candidate excludes different station");
+            string switchHome=Path.Combine(Path.GetTempPath(),"zoo-switch-"+Guid.NewGuid());
+            try{RecommendationSwitch.Save(switchHome,false);Check(File.Exists(Path.Combine(switchHome,"recommend-disabled.txt")),"Recommendation OFF persisted");RecommendationSwitch.Save(switchHome,true);Check(!File.Exists(Path.Combine(switchHome,"recommend-disabled.txt")),"Recommendation ON persisted");}finally{if(Directory.Exists(switchHome))Directory.Delete(switchHome);}
             var tastes=Enumerable.Range(0,127).Select(i=>new Taste("工場見学 金属部品 職人の技術 "+i,1)).ToList();
             var measurements=new List<object>();
             measurements.Add(Time("rank-3000-programs-127-preferences",5,()=>{var ranker=new Ranker(tastes);foreach(var s in shows)ranker.Score(s);}));

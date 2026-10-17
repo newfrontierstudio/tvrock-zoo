@@ -68,7 +68,7 @@ internal sealed partial class MainForm
         var keySearch=new Button{Text="検索ワードで探す",AutoSize=true};keySearch.Click+=(_,_)=>SearchNativeKeyword();
         var keyEdit=new Button{Text="条件を編集",AutoSize=true};keyEdit.Click+=async(_,_)=>{if(_nativeKeywords.CurrentRow?.Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
         keybar.Controls.AddRange([keySearch,keyEdit]); keysPage.Controls.Add(_nativeKeywords);keysPage.Controls.Add(keybar);
-        Col(_nativeKeywords,"order","順",55);Col(_nativeKeywords,"enabled","状態",65);Col(_nativeKeywords,"title","検索ワード",330);Col(_nativeKeywords,"detail","詳細条件",220);Col(_nativeKeywords,"station","局",180);Col(_nativeKeywords,"days","曜日",130);Col(_nativeKeywords,"hours","時間",100);
+        Col(_nativeKeywords,"order","順",55);Col(_nativeKeywords,"enabled","状態",65);Col(_nativeKeywords,"title","検索ワード",330);Col(_nativeKeywords,"detail","詳細条件",220);Col(_nativeKeywords,"station","局",180);Col(_nativeKeywords,"days","曜日",130);Col(_nativeKeywords,"hours","時間",100);Col(_nativeKeywords,"candidates","候補番組（参考）",340,true);
         _nativeKeywords.CellDoubleClick+=async(_,e)=>{if(e.RowIndex>=0&&_nativeKeywords.Rows[e.RowIndex].Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
         foreach(var g in new[]{_nativeReservations,_nativeGuide,_nativeKeywords}) { g.DefaultCellStyle.Font=new Font("Meiryo UI",10);g.AlternatingRowsDefaultCellStyle.BackColor=Color.FromArgb(243,247,252);g.ColumnHeaderMouseClick+=(_,e)=>SortNativeGrid(g,e.ColumnIndex); }
         InitializeReadableDesign(toolbar);
@@ -164,7 +164,7 @@ internal sealed partial class MainForm
                     _nativeGuideStamp=stamp.ToString("MM/dd HH:mm");SaveNativeCache(new DateTimeOffset(stamp,TimeSpan.FromHours(9)));
                 }
             }
-            foreach(string station in _nativeShows.Select(s=>s.Station).Distinct())if(!_nativeStation.Items.Contains(station))_nativeStation.Items.Add(station);RenderNativeGuide();
+            foreach(string station in _nativeShows.Select(s=>s.Station).Distinct())if(!_nativeStation.Items.Contains(station))_nativeStation.Items.Add(station);RenderNativeGuide();UpdateKeywordCandidates();
         }catch(Exception e){_nativeStatus.Text="保存済み番組表を読み込めません: "+e.Message;}
     }
     void SaveNativeCache(DateTimeOffset fetched){Directory.CreateDirectory(RecommendationHome);var path=Path.Combine(RecommendationHome,"guide-cache-v3.json");File.WriteAllText(path+".tmp",JsonSerializer.Serialize(new GuideCache(fetched,_nativeShows),NativeJson));File.Move(path+".tmp",path,true);}

@@ -16,6 +16,8 @@ internal sealed class RuntimeConfiguration
     {
         if (!Uri.TryCreate(text.Trim(), UriKind.Absolute, out var uri)) return text.Trim();
         var builder = new UriBuilder(uri) { Query = "", Fragment = "" };
+        // Accept the local computer name copied from TVRock, without allowing remote servers.
+        if (uri.Host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase)) builder.Host = "127.0.0.1";
         var leaf = builder.Path.Split('/').Last();
         if (new[] { "list", "day", "now", "kwl", "kws", "reg", "new" }.Contains(leaf))
             builder.Path = builder.Path[..(builder.Path.LastIndexOf('/') + 1)];

@@ -3,7 +3,7 @@
   if (document.getElementById('ts-reservation-ui')) return;
   const style = document.createElement('style');
   style.id = 'ts-reservation-ui';
-  style.textContent = '.ts-offset {display:inline-flex;align-items:center;gap:4px;white-space:nowrap}.ts-offset select {width:4.5em;font:inherit}.ts-option-hidden {display:none!important}';
+  style.textContent = '.ts-offset {display:inline-flex;align-items:center;gap:4px;white-space:nowrap}select,input[type="text"],input[type="number"] {box-sizing:border-box!important;height:28px!important;min-height:28px!important;vertical-align:middle;font:inherit;padding:1px 4px!important}.ts-offset select,select[name="idle"] {width:4.5em!important;font:inherit}.ts-option-hidden {display:none!important}';
   document.head.append(style);
 
   // Keep the original named select in its form: only its presentation changes.

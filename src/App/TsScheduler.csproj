@@ -6,9 +6,9 @@
     <Product>TVRock Zoo</Product>
     <AssemblyTitle>TVRock Zoo</AssemblyTitle>
     <Description>TVRock用 予約・番組表ツール</Description>
-    <Version>0.1.5</Version>
-    <FileVersion>0.1.5.0</FileVersion>
-    <AssemblyVersion>0.1.5.0</AssemblyVersion>
+    <Version>0.1.6</Version>
+    <FileVersion>0.1.6.0</FileVersion>
+    <AssemblyVersion>0.1.6.0</AssemblyVersion>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
