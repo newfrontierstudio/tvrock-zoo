@@ -22,7 +22,7 @@ internal sealed partial class MainForm
         }
 
     }
-    internal static string ReservationDisplayFingerprint(IEnumerable<Booking> bookings,IEnumerable<AiEntry> recommendations)=>System.Text.Json.JsonSerializer.Serialize(new{Bookings=bookings.OrderBy(b=>b.Id).Select(b=>new{b.Id,b.Title,b.Station,b.ServiceId,b.EventId,b.Start,b.End,b.Device,b.Enabled,Search=b.Fields.GetValueOrDefault("SEARCHID","")}),Recommendations=recommendations.OrderBy(a=>a.ReservationId)});
+    internal static string ReservationDisplayFingerprint(IEnumerable<Booking> bookings,IEnumerable<AiEntry> recommendations)=>System.Text.Json.JsonSerializer.Serialize(new{Bookings=bookings.OrderBy(b=>b.Id).Select(b=>new{b.Id,b.Title,b.Station,b.ServiceId,b.EventId,b.Start,b.End,b.Device,b.Enabled,Search=b.Fields.GetValueOrDefault("SEARCHID",""),Ready=b.Fields.GetValueOrDefault("READY",""),Tail=b.Fields.GetValueOrDefault("TALE","")}),Recommendations=recommendations.OrderBy(a=>a.ReservationId)});
     internal int RefreshReservationClock(DateTimeOffset now)
     {
         int changed=0;

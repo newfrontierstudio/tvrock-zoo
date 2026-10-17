@@ -81,6 +81,22 @@ static class Bench
                 tabs.SelectedIndex=1;Check(tabs.SelectedIndex==1,"Custom-painted tabs remain selectable");
                 if(args.Length>2)image.Save(args[2],System.Drawing.Imaging.ImageFormat.Png);
             }
+            Check(MainForm.TimingSeries("情報7daysニュースキャスター 異例の速報")=="情報7daysニュースキャスター","Series default drops episode-specific subtitle");
+            Check(MainForm.TimingSeries("MUSIC FAIR")=="MUSIC FAIR","Series default preserves multiword Latin title");
+            var timingRule=new TimingRule("TBS","情報7days",-10,20);
+            var timingBooking=running with{Id="timing",Station="TBS",Title="情報7daysニュースキャスター 特集",Fields=new(){{"READY","0"},{"TALE","0"}}};
+            Check(TimingSettings.Matches(timingRule,timingBooking),"Series matches an existing reservation");
+            Check(!TimingSettings.Matches(timingRule,timingBooking with{Station="テレビ朝日"}),"Timing policy remains scoped to station");
+            var settings=new TimingSettings{Rules=[timingRule]};Check(settings.Desired(timingBooking)==(-10,20),"Existing reservation receives always policy");
+            Check(settings.Desired(timingBooking with{Id="future",Start=now.AddDays(7)})==(-10,20),"New future reservation receives same absolute policy");
+            settings.Once.Add(new("timing",5,-5));Check(settings.Desired(timingBooking)==(5,-5),"One-off override takes precedence for its reservation");
+            var baseFields=new Dictionary<string,string>{{"i","timing"},{"title","fixture"},{"ready","0"},{"tale","0"},{"year","2026"},{"devno","5"},{"valid","true"}};
+            var changed=RecordingTiming.BuildFields(baseFields,-10,20);Check(changed["ready"]=="10"&&changed["tale"]=="20"&&changed["year"]=="2026"&&changed["devno"]=="5"&&changed["valid"]=="true"&&baseFields["ready"]=="0","Offsets preserve time, tuner and validity fields");
+            var fake=timingBooking with{Title="fixture"};int sends=0;
+            Task<string> FakeGet(string relative){if(relative.StartsWith("reg?"))return Task.FromResult("<form name=\u0027regsch\u0027><input name='i' value='timing'><input name='title' value='fixture'><input name='ready' value='0'><input name='tale' value='0'><input name='valid' type='checkbox' value='true' checked><input type='submit' name='submit' value='予約を変更'></form>");sends++;var q=Data.Query(relative);fake=fake with{Fields=new(){{"READY",q["ready"]},{"TALE",q["tale"]}}};throw new HttpRequestException("synthetic response reset after successful send");}
+            RecordingTiming.Apply(fake,-10,20,()=>[fake],FakeGet,()=>{}).GetAwaiter().GetResult();
+            RecordingTiming.Apply(fake,-10,20,()=>[fake],FakeGet,()=>{}).GetAwaiter().GetResult();
+            Check(sends==1&&RecordingTiming.Current(fake)==(-10,20),"Response reset is verified without resend; repeated enforcement never adds offsets");
             var measurements=new List<object>();
             measurements.Add(Time("rank-3000-programs-127-preferences",5,()=>{var ranker=new Ranker(tastes);foreach(var s in shows)ranker.Score(s);}));
             string fixture=Path.GetTempFileName();
