@@ -537,7 +537,7 @@ internal sealed partial class MainForm : Form
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("終了", null, (_, _) => ExitFromTray());
         _trayIcon.Icon = _appIcon;
-        _trayIcon.Text = "TVRock Zoo Ver.0.1.5";
+        _trayIcon.Text = "TVRock Zoo Ver.0.1.6";
         _trayIcon.ContextMenuStrip = menu;
         _trayIcon.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowFromTray(); };
         _trayIcon.Visible = true;
@@ -547,7 +547,7 @@ internal sealed partial class MainForm : Form
     {
         if (!_startInTray) return;
         Hide();
-        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.0.1.5", "常駐を開始しました。通知領域のアイコンをクリックすると表示します。", ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.0.1.6", "常駐を開始しました。通知領域のアイコンをクリックすると表示します。", ToolTipIcon.Info);
     }
 
     private void HideToTrayWhenClosing(FormClosingEventArgs e)
@@ -555,7 +555,7 @@ internal sealed partial class MainForm : Form
         if (_exitRequested || e.CloseReason == CloseReason.WindowsShutDown) return;
         e.Cancel = true;
         Hide();
-        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.0.1.5", "通知領域で常駐しています。右クリックから終了できます。", ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.0.1.6", "通知領域で常駐しています。右クリックから終了できます。", ToolTipIcon.Info);
     }
 
     private void ShowFromTray()
