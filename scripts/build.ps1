@@ -7,6 +7,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }
 dotnet publish (Join-Path $root 'src/Recommend/TsRecommend.csproj') -c Release -r win-x64 --self-contained true -p:DebugType=None -p:DebugSymbols=false -p:RuntimeFrameworkVersion=8.0.32 -p:OutputType=WinExe -o (Join-Path $app 'Recommend')
 if ($LASTEXITCODE -ne 0) { throw 'Recommendation build failed' }
 Copy-Item (Join-Path $root 'README.md') $app
+Copy-Item (Join-Path $root 'LICENSE') $app
 Copy-Item (Join-Path $root 'BENCHMARKS.md') $app
 Copy-Item (Join-Path $root 'THIRD-PARTY-NOTICES.md') $app
 Copy-Item (Join-Path $root 'licenses') $app -Recurse -Force

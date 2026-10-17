@@ -6,4 +6,4 @@ TVRock Zoo does not include TVRock or any tuner driver.
 - Html Agility Pack 1.12.4 — ZZZ Projects and contributors; MIT license. See `licenses/HtmlAgilityPack-LICENSE.txt`.
 - Microsoft.Web.WebView2 SDK 1.0.3485.44 — Microsoft Corporation; license in `licenses/WebView2-LICENSE.txt`. WebView2 Runtime is installed separately.
 
-Package versions are pinned in project files. Third-party components retain their respective licenses. An open-source license for TVRock Zoo itself has not yet been selected.
+Package versions are pinned in project files. Third-party components retain their respective licenses. TVRock Zoo itself is licensed under the MIT License; see LICENSE.

@@ -1,4 +1,4 @@
-# TVRock Zoo Ver.0.1.7
+# TVRock Zoo Ver.0.1.13
 
 TVRockの予約一覧・番組表・自動検索予約を、軽快な専用画面で操作するWindows向け非公式ツールです。録画は既存のTVRockが担当します。
 
@@ -19,7 +19,7 @@ TVRockの予約一覧・番組表・自動検索予約を、軽快な専用画�
 
 ## 速度・検証
 
-合成データの中央値：予約500件の読み込み約1.3ms、番組表描画約20ms、おすすめ計算（3000番組・127条件）約0.61秒。起動・TVRock通信・予約書き込みは含みません。詳細は[BENCHMARKS.md](BENCHMARKS.md)。
+合成データの中央値：予約500件の読み込み約1.4ms、番組表描画約21ms、おすすめ計算（3000番組・127条件）約0.73秒。起動・TVRock通信・予約書き込みは含みません。詳細は[BENCHMARKS.md](BENCHMARKS.md)。
 
 インストール・実行テスト・アンインストールは検証済み。新規PCのWebView2導入と全録画構成の確認は未完了です。署名なしの先行公開版です。
 
@@ -27,4 +27,8 @@ TVRockの予約一覧・番組表・自動検索予約を、軽快な専用画�
 
 設定と変更前バックアップは `%LOCALAPPDATA%\TVRockZoo` に保存し、アンインストール後も残します。TVRock本体・BonDriver・録画は配布に含みません。
 
-.NET 8 SDKとInno Setup 6を用意し、`scripts/build.ps1` でビルドできます。ソースのライセンスは未設定です。依存ライブラリは[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)を参照してください。
+.NET 8 SDKとInno Setup 6を用意し、`scripts/build.ps1` でビルドできます。依存ライブラリは[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)を参照してください。
+
+## ライセンス
+
+GNUの自由ソフトウェアの理念に共感し、ソースを公開しています。TVRock Zooは、再利用しやすい[MITライセンス](LICENSE)を採用しています。
