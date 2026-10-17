@@ -85,7 +85,7 @@ internal sealed partial class MainForm
     }
     void StyleControls(Control root)
     {
-        if(root is Button button){RoundedControls.Apply(button);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=button==_recommend?Accent:Color.FromArgb(231,238,247);button.ForeColor=button==_recommend?Color.White:Ink;button.Padding=new Padding(9,4,9,4);button.Margin=new Padding(4,3,8,3);button.Cursor=Cursors.Hand;button.MinimumSize=new Size(0,33);}
+        if(root is Button button){RoundedControls.Apply(button);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=button==_recommend?Accent:(button.Text is "一覧を更新" or "文字 −" or "文字 ＋" or "元に戻す"?Color.FromArgb(237,239,242):Color.FromArgb(231,238,247));button.ForeColor=button==_recommend?Color.White:Ink;button.Padding=new Padding(9,4,9,4);button.Margin=new Padding(4,3,8,3);button.Cursor=Cursors.Hand;button.MinimumSize=new Size(0,33);}
         if(root is CheckBox check){check.ForeColor=Ink;check.Margin=new Padding(8,6,10,4);}
         if(root is FlowLayoutPanel flow){flow.BackColor=Color.White;flow.Padding=new Padding(4,4,4,5);}
         foreach(Control child in root.Controls)StyleControls(child);
@@ -137,3 +137,4 @@ internal sealed partial class MainForm
     }
     void DisposeReadableDesign(){HideLargeTip();_hoverDelay.Dispose();_largeTip.Dispose();_hoverFont.Dispose();_hoverKeywordFont.Dispose();foreach(var font in _readingFonts)font.Dispose();}
 }
+

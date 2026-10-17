@@ -38,7 +38,7 @@ internal sealed partial class MainForm
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.1.0.6";
+        Text="TVRock Zoo — 予約・番組表 Ver.1.0.7";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;
@@ -236,4 +236,5 @@ internal sealed partial class MainForm
         }catch(Exception e){_nativeStatus.Text="予約を完了できませんでした："+e.Message;MessageBox.Show(this,e.Message,"予約を完了できませんでした");}finally{_manualBookingBusy=false;UseWaitCursor=false;}
     }
 }
+
 

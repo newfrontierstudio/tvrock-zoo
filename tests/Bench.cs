@@ -20,6 +20,7 @@ static class Bench
             Check(RuntimeConfiguration.NormalizeUrl("http://remote.invalid:8969/test/")=="http://remote.invalid:8969/test/","Remote host must not become localhost");
             Check(typeof(RuntimeConfiguration).GetProperty("ExcludeNhkPromos")==null,"Personal PR setting remains");
             using(var setup=new SetupDialog()){Check(!Descendants(setup).Any(c=>c.Text.Contains("PR予約")),"PR checkbox remains");}
+            int sampleStart=MainForm.ConsultPrompt.IndexOf('{'),sampleEnd=MainForm.ConsultPrompt.IndexOf('}',sampleStart);Check(ConsultPreferences.Parse(MainForm.ConsultPrompt[sampleStart..(sampleEnd+1)]).Include.Contains("旅行"),"Consult prompt JSON sample must be importable");
             var imported=ConsultPreferences.Parse("```json\n{\"include\":[\"旅行\",\"旅行\"],\"exclude\":[\"通販\"]}\n```");
             Check(imported.Include.Length==1&&imported.AddTo([]).Single().Text=="旅行","Consult import and dedup");
             var consultShow=new Show("consult",1,1,"NHK","旅行の案内","通販の紹介",DateTimeOffset.Now.AddHours(1),DateTimeOffset.Now.AddHours(2),[]);
@@ -47,6 +48,7 @@ static class Bench
             Check(MainForm.NextReservationBoundary(new[]{running},running.End)==DateTimeOffset.MaxValue,"Expired bookings do not cause continuous reloads");
             using(var form=new MainForm(false)){
                 object Field(string name)=>typeof(MainForm).GetField(name,BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(form)!;
+                Check(((TabControl)Field("_tabs")).TabPages.Cast<TabPage>().Any(p=>p.Text=="ChatGPT"),"ChatGPT tab must exist");Check(((DataGridView)Field("_consultResults")).Columns.Contains("title"),"Consult filter results must exist");
                 var caption=(Button)Field("_foldDisabled");var panel=(Panel)Field("_disabledBox");var split=(SplitContainer)Field("_reservationSplit");
                 foreach(float size in new[]{10f,18f,24f}){using var font=new Font("Meiryo UI",size);caption.Font=font;panel.PerformLayout();Check(caption.Height>=caption.Font.Height+8,"Disabled caption must fit enlarged font");}
                 Check(((System.Windows.Forms.Timer)Field("_nativeTimer")).Interval==1000,"Reservation file changes checked every second");
@@ -118,4 +120,6 @@ static class Bench
     }
     static IEnumerable<Control> Descendants(Control c)=>c.Controls.Cast<Control>().SelectMany(x=>new[]{x}.Concat(Descendants(x)));
 }
+
+
 

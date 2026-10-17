@@ -28,11 +28,11 @@ internal sealed partial class MainForm
 今すぐ選ぶときは「おすすめ更新」。自動実行は3日ごとに最大20件で、初期状態はOFFです。
 OFFにしても予約済みの番組は残ります。太字・斜体がおすすめ予約です。");
         TextBlock(@"② ChatGPTで、もっと好みに合わせる（任意）",true);
-        TextBlock(@"1. 「自動検索予約」の「好みを相談」を押します。相談文がコピーされ、ChatGPTが開きます。
+        TextBlock(@"1. 「ChatGPT」タブの「ChatGPTに相談する」を押します。相談文がコピーされ、ChatGPTが開きます。
 2. ChatGPTに貼り付けて送信し、好きな番組・避けたい内容を答えます。
-3. 最後の回答をコピーして、Zooの「回答を取り込む」を押します。
+3. 最後の回答をコピーして、Zooの「ChatGPTの回答を取り込む」を押します。
 4. 「内容を確認」で好きな内容・除外する内容を確認し、適用します。
-次のおすすめ選びから好みを使います。今すぐ選ぶには「おすすめ更新」を押してください。
+取り込むとChatGPTタブの下にフィルタリング結果が出ます。番組をダブルクリックして予約できます。
 ChatGPTはブラウザーで使えます。アプリのインストールやAPIキーの設定は不要です。
 ChatGPTへの送信と回答のコピーは自分で行います。Zooから予約履歴などは送信しません。
 取り込んだ条件はZooのおすすめ専用です。TVRockの検索条件・既存予約は変わりません。");
@@ -84,4 +84,8 @@ internal sealed class FlatTabControl:TabControl
         get{var area=base.DisplayRectangle;int top=Math.Max(0,area.Top-3);return new Rectangle(0,top,ClientSize.Width,Math.Max(0,ClientSize.Height-top));}
     }
 }
+
+
+
+
 
