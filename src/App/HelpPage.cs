@@ -44,6 +44,7 @@ internal sealed partial class MainForm
     }
     static void ApplyFlatSurfaces(Control control)
     {
+        if(control is Button||control is CheckBox {Appearance:Appearance.Button})RoundedControls.Apply(control);
         if(control is MainForm){control.Padding=Padding.Empty;control.BackColor=Color.White;}
         if(control is TabPage page)page.Padding=Padding.Empty;
         if(control is Panel panel)panel.BorderStyle=BorderStyle.None;

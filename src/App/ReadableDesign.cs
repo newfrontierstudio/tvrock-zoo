@@ -23,7 +23,7 @@ internal sealed partial class MainForm
         _tabs.ItemSize=new Size(170,35);_tabs.Padding=new Point(14,8);
         _tabs.DrawItem+=(_,e)=>{
             bool selected=e.Index==_tabs.SelectedIndex;var r=e.Bounds;r.Inflate(-3,-3);
-            using var brush=new SolidBrush(selected?Accent:Color.FromArgb(232,238,245));e.Graphics.FillRectangle(brush,r);
+            using var brush=new SolidBrush(selected?Accent:Color.FromArgb(232,238,245));using(var shape=RoundedControls.Shape(r,4*DeviceDpi/96f)){var previous=e.Graphics.SmoothingMode;e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;e.Graphics.FillPath(brush,shape);e.Graphics.SmoothingMode=previous;}
             var textBounds=r;
             if(e.Index==0){var arrow=ReservationArrowBounds(e.Bounds,DeviceDpi);textBounds.Width=Math.Max(1,arrow.Left-textBounds.Left);using(var divider=new SolidBrush(Color.White))e.Graphics.FillRectangle(divider,arrow.Left,r.Top+3,1,Math.Max(1,r.Height-6));TextRenderer.DrawText(e.Graphics,"▼",baseFont,arrow,selected?Color.White:Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);}
             TextRenderer.DrawText(e.Graphics,_tabs.TabPages[e.Index].Text,baseFont,textBounds,selected?Color.White:Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
@@ -85,7 +85,7 @@ internal sealed partial class MainForm
     }
     void StyleControls(Control root)
     {
-        if(root is Button button){button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=button==_recommend?Accent:Color.FromArgb(231,238,247);button.ForeColor=button==_recommend?Color.White:Ink;button.Padding=new Padding(9,4,9,4);button.Margin=new Padding(4,3,8,3);button.Cursor=Cursors.Hand;button.MinimumSize=new Size(0,33);}
+        if(root is Button button){RoundedControls.Apply(button);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=button==_recommend?Accent:Color.FromArgb(231,238,247);button.ForeColor=button==_recommend?Color.White:Ink;button.Padding=new Padding(9,4,9,4);button.Margin=new Padding(4,3,8,3);button.Cursor=Cursors.Hand;button.MinimumSize=new Size(0,33);}
         if(root is CheckBox check){check.ForeColor=Ink;check.Margin=new Padding(8,6,10,4);}
         if(root is FlowLayoutPanel flow){flow.BackColor=Color.White;flow.Padding=new Padding(4,4,4,5);}
         foreach(Control child in root.Controls)StyleControls(child);

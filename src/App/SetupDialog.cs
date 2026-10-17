@@ -40,6 +40,7 @@ internal sealed class SetupDialog : Form
             try { updated.Save(); DialogResult = DialogResult.OK; Close(); } catch (Exception e) { MessageBox.Show(this, e.Message); }
         };
         layout.Controls.Add(save, 1, 4); Controls.Add(layout); AcceptButton = save;
+        foreach(var button in new[]{browse,save}){button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=Color.FromArgb(231,238,247);RoundedControls.Apply(button);}
     }
     internal static bool EnsureConfigured()
     {

@@ -233,7 +233,7 @@ internal sealed partial class MainForm : Form
                     document.getElementById('ts-scheduler-tvrock-style')?.remove();
                     const style = document.createElement('style');
                     style.id = 'ts-scheduler-tvrock-style';
-                    style.textContent = '';
+                    style.textContent = 'button,input[type=button],input[type=submit],input[type=reset]{border-radius:4px !important;}';
                     const isList = location.pathname === '/user/list'
                       || location.pathname === '/user/kwl'
                       || location.pathname === '/user/kws';

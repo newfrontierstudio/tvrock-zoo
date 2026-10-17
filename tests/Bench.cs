@@ -60,6 +60,11 @@ static class Bench
                 TextRenderer.DrawText(graphics,"開始日時                 長さ       局          番組名",rowFont,new Rectangle(8,0,744,34),Color.FromArgb(23,42,62),TextFormatFlags.VerticalCenter);
                 if(args.Length>1)badgeImage.Save(args[1],System.Drawing.Imaging.ImageFormat.Png);
             }
+            using(var button=new Button{Size=new Size(120,36)}){
+                RoundedControls.Apply(button);Check(button.Region!=null&&!button.Region.IsVisible(0,0)&&button.Region.IsVisible(60,18),"Rounded button keeps its center and clips corners");
+                button.Size=new Size(180,42);Check(button.Region!.IsVisible(175,20)&&!button.Region.IsVisible(179,0),"Rounded button region follows resized bounds");
+                int clicked=0;button.Click+=(_,_)=>clicked++;button.PerformClick();Check(clicked==1,"Rounded button retains normal click behavior");
+            }
             var measurements=new List<object>();
             measurements.Add(Time("rank-3000-programs-127-preferences",5,()=>{var ranker=new Ranker(tastes);foreach(var s in shows)ranker.Score(s);}));
             string fixture=Path.GetTempFileName();
