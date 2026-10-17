@@ -7,9 +7,9 @@ internal static class StationBadgeRenderer
     internal static Color Background(string station)
     {
         string key=Data.StationKey(station);
-        double hue=key switch{"NHK"=>20,"日本テレビ"=>85,"テレビ朝日"=>315,"TBS"=>270,"テレビ東京"=>180,"フジテレビ"=>55,"Eテレ"=>140,"TOKYOMX"=>230,_=>-1};
+        double hue=key switch{"NHK"=>245,"日本テレビ"=>85,"テレビ朝日"=>300,"TBS"=>270,"テレビ東京"=>180,"フジテレビ"=>105,"Eテレ"=>140,"TOKYOMX"=>230,_=>-1};
         if(hue<0)return Color.FromArgb(239,241,243);
-        double angle=hue*Math.PI/180,chroma=key=="NHK"?4:7,fy=111d/116;
+        double angle=hue*Math.PI/180,chroma=key is "NHK" or "フジテレビ"?3:5,fy=112d/116;
         double fx=fy+chroma*Math.Cos(angle)/500,fz=fy-chroma*Math.Sin(angle)/200;
         static double Inv(double t)=>t>6d/29?t*t*t:3*Math.Pow(6d/29,2)*(t-4d/29);
         double x=.95047*Inv(fx),y=Inv(fy),z=1.08883*Inv(fz);
