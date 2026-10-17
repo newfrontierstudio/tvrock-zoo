@@ -36,7 +36,7 @@ internal sealed partial class MainForm
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.0.1.9";
+        Text="TVRock Zoo — 予約・番組表 Ver.0.1.10";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;
@@ -117,7 +117,7 @@ internal sealed partial class MainForm
             _nativeBookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));
             var file=Path.Combine(RecommendationHome,"ai-recommendations.json");_nativeAi=File.Exists(file)?JsonSerializer.Deserialize<List<AiEntry>>(File.ReadAllText(file),NativeJson)??[]:[];
             _nativeReservations.Rows.Clear();
-            foreach(var b in _nativeBookings.Where(b=>b.Enabled&&(_includeFinishedBookings.Checked||b.End>DateTimeOffset.Now)).OrderBy(b=>b.Start)){
+            foreach(var b in ReservationRows(_nativeBookings,_mergeReservations,_includeFinishedBookings.Checked,DateTimeOffset.Now)){
                 var ai=_nativeAi.FirstOrDefault(a=>IsAiBooking(b,a));string key=b.Fields.GetValueOrDefault("SEARCHID","");var keyword=_nativeKeys.FirstOrDefault(k=>k.Id==key);
                 string word=keyword==null?"手動":string.IsNullOrWhiteSpace(keyword.Title)?keyword.Detail:keyword.Title;
                 int i=_nativeReservations.Rows.Add(b.Enabled?"○":"×",b.Start.LocalDateTime,(int)Math.Round((b.End-b.Start).TotalMinutes),b.Station,ai?.SearchWord??word,b.Title);

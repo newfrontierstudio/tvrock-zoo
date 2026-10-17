@@ -14,7 +14,7 @@ internal sealed partial class MainForm
     readonly Dictionary<string,GridLayout> _pendingGridLayouts=[];
     sealed record UndoChange(Booking Before,bool Applied);
     sealed class GridLayout {public Dictionary<string,int> Widths{get;set;}=[];public string? First{get;set;}public int Index{get;set;}public int Horizontal{get;set;}}
-    sealed class WorkspaceLayout {public bool Collapsed{get;set;}public int DisabledHeight{get;set;}=180;public int Tab{get;set;}public Dictionary<string,GridLayout> Grids{get;set;}=[];public DateTime Day{get;set;}public Point Scroll{get;set;}}
+    sealed class WorkspaceLayout {public bool Merged{get;set;}public bool Collapsed{get;set;}public int DisabledHeight{get;set;}=180;public int Tab{get;set;}public Dictionary<string,GridLayout> Grids{get;set;}=[];public DateTime Day{get;set;}public Point Scroll{get;set;}}
     IEnumerable<(string Name,DataGridView Grid)> LayoutGrids()=>new[]{("reservations",_nativeReservations),("disabled",_disabledReservations),("keywords",_nativeKeywords),("guide",_nativeGuide)};
     static string? RowIdentity(DataGridViewRow row)=>row.Tag switch{Booking b=>b.Id,KeywordEntry k=>k.Id,Show s=>s.Key,_=>null};
     void InitializeWorkspacePreferences(FlowLayoutPanel toolbar,TabPage page)
@@ -35,6 +35,7 @@ internal sealed partial class MainForm
     void SetDisabledCollapsed(bool collapsed){_disabledCollapsed=collapsed;_disabledReservations.Visible=!collapsed;ApplyReservationSplit();UpdateDisabledCaption();}
     void ApplyReservationSplit()
     {
+        if(_reservationSplit.Panel2Collapsed)return;
         int available=_reservationSplit.ClientSize.Height-_reservationSplit.SplitterWidth;if(available<100)return;
         int bottom=Math.Clamp(_disabledCollapsed?44:_disabledExpandedHeight,32,available-60);
         _applyingReservationSplit=true;try{_reservationSplit.SplitterDistance=available-bottom;}finally{_applyingReservationSplit=false;}
@@ -45,11 +46,11 @@ internal sealed partial class MainForm
     void SaveWorkspaceLayout()
     {
         if(!_layoutReady||(TestLayoutFile==null&&Environment.GetCommandLineArgs().Contains("--self-test")))return;
-        try{var state=new WorkspaceLayout{Collapsed=_disabledCollapsed,DisabledHeight=_disabledExpandedHeight,Tab=_tabs.SelectedIndex,Day=_scheduleDate.Value.Date,Scroll=_schedule.AutoScrollPosition};foreach(var item in LayoutGrids()){var grid=item.Grid;int first=grid.FirstDisplayedScrollingRowIndex;state.Grids[item.Name]=new GridLayout{Widths=grid.Columns.Cast<DataGridViewColumn>().Where(c=>c.Visible).ToDictionary(c=>c.Name,c=>c.Width),First=first>=0?RowIdentity(grid.Rows[first]):null,Index=Math.Max(0,first),Horizontal=grid.HorizontalScrollingOffset};}Directory.CreateDirectory(RecommendationHome);File.WriteAllText(LayoutFile+".tmp",JsonSerializer.Serialize(state));File.Move(LayoutFile+".tmp",LayoutFile,true);}catch(IOException){}catch(InvalidOperationException){}
+        try{var state=new WorkspaceLayout{Merged=_mergeReservations,Collapsed=_disabledCollapsed,DisabledHeight=_disabledExpandedHeight,Tab=_tabs.SelectedIndex,Day=_scheduleDate.Value.Date,Scroll=_schedule.AutoScrollPosition};foreach(var item in LayoutGrids()){var grid=item.Grid;int first=grid.FirstDisplayedScrollingRowIndex;state.Grids[item.Name]=new GridLayout{Widths=grid.Columns.Cast<DataGridViewColumn>().Where(c=>c.Visible).ToDictionary(c=>c.Name,c=>c.Width),First=first>=0?RowIdentity(grid.Rows[first]):null,Index=Math.Max(0,first),Horizontal=grid.HorizontalScrollingOffset};}Directory.CreateDirectory(RecommendationHome);File.WriteAllText(LayoutFile+".tmp",JsonSerializer.Serialize(state));File.Move(LayoutFile+".tmp",LayoutFile,true);}catch(IOException){}catch(InvalidOperationException){}
     }
     void RestoreWorkspaceLayout()
     {
-        try{if(!File.Exists(LayoutFile))return;var state=JsonSerializer.Deserialize<WorkspaceLayout>(File.ReadAllText(LayoutFile));if(state==null)return;_disabledExpandedHeight=Math.Max(80,state.DisabledHeight);SetDisabledCollapsed(state.Collapsed);if(state.Day.Year>2020)_scheduleDate.Value=state.Day;
+        try{if(!File.Exists(LayoutFile))return;var state=JsonSerializer.Deserialize<WorkspaceLayout>(File.ReadAllText(LayoutFile));if(state==null)return;SetReservationView(state.Merged,false);_disabledExpandedHeight=Math.Max(80,state.DisabledHeight);SetDisabledCollapsed(state.Collapsed);if(state.Day.Year>2020)_scheduleDate.Value=state.Day;
             foreach(var item in LayoutGrids()){if(!state.Grids.TryGetValue(item.Name,out var saved))continue;foreach(var size in saved.Widths){if(!item.Grid.Columns.Contains(size.Key))continue;var column=item.Grid.Columns[size.Key];if(item.Name is "reservations" or "disabled" && column.Name=="title")continue;column.AutoSizeMode=DataGridViewAutoSizeColumnMode.None;column.Width=Math.Clamp(size.Value,30,2000);}}
             FitReservationColumns(_nativeReservations);FitReservationColumns(_disabledReservations);
             _pendingGridLayouts.Clear();foreach(var pair in state.Grids)_pendingGridLayouts[pair.Key]=pair.Value;_tabs.SelectedIndex=Math.Clamp(state.Tab,0,_tabs.TabCount-1);BeginInvoke(new Action(()=>{RestorePendingScroll();_schedule.AutoScrollPosition=state.Scroll;}));

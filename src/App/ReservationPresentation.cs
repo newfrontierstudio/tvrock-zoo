@@ -14,6 +14,7 @@ internal sealed partial class MainForm
             grid.ColumnWidthChanged+=(_,_)=>FitReservationColumns(grid);
             grid.CellFormatting+=(_,e)=>{
                 if(e.RowIndex<0||grid.Rows[e.RowIndex].Tag is not Booking b)return;
+                if(!b.Enabled){e.CellStyle.BackColor=Color.FromArgb(247,247,247);e.CellStyle.ForeColor=Color.FromArgb(100,108,116);}
                 if(IsRecordingWindow(b,DateTimeOffset.Now)){e.CellStyle.BackColor=Color.FromArgb(255,236,236);e.CellStyle.SelectionBackColor=Color.FromArgb(249,215,215);}
             };
             FitReservationColumns(grid);

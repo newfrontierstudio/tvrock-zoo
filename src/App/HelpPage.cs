@@ -12,6 +12,7 @@ internal sealed partial class MainForm
         TextBlock(@"TVRockの予約・番組表を専用画面で操作する非公式ツールです。録画はTVRockが担当します。");
         TextBlock(@"予約一覧",true);
         TextBlock(@"○で「録画しない」へ、×で有効な予約に戻します。編集は行をダブルクリック。
+「予約一覧」を右クリックすると、分割表示／日時順のまとめ表示を切り替えられます。
 押し間違いは「元に戻す」。上下の境界はドラッグで高さを調整できます。
 録画時間中は薄赤で表示します（実際の録画成功を示すものではありません）。");
         TextBlock(@"番組表・検索／自動検索予約",true);
@@ -33,6 +34,11 @@ internal sealed partial class MainForm
         var support=new Button{Text="☕ 開発を応援する（note）",AutoSize=true,Margin=new Padding(0,6,0,6)};body.Controls.Add(support);StyleControls(support);
         support.Click+=(_,_)=>{try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SupportNoteUrl){UseShellExecute=true});}catch(Exception e){MessageBox.Show(this,e.Message,"noteを開けませんでした");}};
         TextBlock(@"noteの紹介記事を開きます。記事末尾の「チップで応援する」から応援できます。");
+        string paypalFile=Path.Combine(RecommendationHome,"support-paypal-url.txt");
+        string paypal=File.Exists(paypalFile)?File.ReadAllText(paypalFile).Trim():"";
+        bool hasPayPal=Uri.TryCreate(paypal,UriKind.Absolute,out var paymentUri)&&paymentUri.Scheme=="https"&&paymentUri.UserInfo.Length==0&&(paymentUri.Host=="paypal.me"||paymentUri.Host=="www.paypal.com"||paymentUri.Host=="paypal.com");
+        var secondary=new Button{Text=hasPayPal?"PayPalで応援する":"PayPal（受け取りリンク準備中）",Enabled=hasPayPal,AutoSize=true,Margin=new Padding(0,3,0,6)};body.Controls.Add(secondary);StyleControls(secondary);
+        secondary.Click+=(_,_)=>{try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(paypal){UseShellExecute=true});}catch(Exception e){MessageBox.Show(this,e.Message,"PayPalを開けませんでした");}};
         void FitText(){int width=Math.Max(180,body.ClientSize.Width-body.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-8);foreach(var label in body.Controls.OfType<Label>())label.MaximumSize=new Size(width,0);}
         body.SizeChanged+=(_,_)=>FitText();FitText();
     }
