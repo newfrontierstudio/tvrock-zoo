@@ -24,7 +24,7 @@ internal sealed partial class MainForm
             bool selected=e.Index==_tabs.SelectedIndex;var r=e.Bounds;r.Inflate(-3,-3);
             using var brush=new SolidBrush(selected?Accent:Color.FromArgb(232,238,245));e.Graphics.FillRectangle(brush,r);
             var textBounds=r;
-            if(e.Index==0){var arrow=ReservationArrowBounds(e.Bounds,DeviceDpi);textBounds.Width=Math.Max(1,arrow.Left-textBounds.Left);TextRenderer.DrawText(e.Graphics,"▼",baseFont,arrow,selected?Color.White:Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);}
+            if(e.Index==0){var arrow=ReservationArrowBounds(e.Bounds,DeviceDpi);textBounds.Width=Math.Max(1,arrow.Left-textBounds.Left);using(var divider=new SolidBrush(Color.White))e.Graphics.FillRectangle(divider,arrow.Left-1,r.Top+3,2,Math.Max(1,r.Height-6));TextRenderer.DrawText(e.Graphics,"▼",baseFont,arrow,selected?Color.White:Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);}
             TextRenderer.DrawText(e.Graphics,_tabs.TabPages[e.Index].Text,baseFont,textBounds,selected?Color.White:Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
         };
         foreach(TabPage page in _tabs.TabPages){page.BackColor=Color.White;page.Padding=new Padding(6);StyleControls(page);}
