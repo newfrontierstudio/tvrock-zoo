@@ -2,12 +2,6 @@
 
 TVRockの予約一覧・番組表・自動検索予約を、軽快な専用画面で操作するWindows向け非公式ツールです。録画は既存のTVRockが担当します。
 
-### 開発を応援する
-
-**[☕ コーヒー代で開発を応援する（note）](https://note.com/discreet/n/n3e2ee058b3bd)**
-
-気に入っていただけたら、記事末尾の「チップで応援する」から開発継続を応援していただけると嬉しいです。
-
 ## はじめ方
 
 1. 設定済みのTVRockと、Windows 10/11（64ビット）を用意します。
@@ -52,6 +46,12 @@ HELPを折りたたみ式にし、文字のコピーに対応。タブ・局の�
 設定と変更前バックアップは `%LOCALAPPDATA%\TVRockZoo` に保存し、アンインストール後も残します。TVRock本体・BonDriver・録画は配布に含みません。
 
 .NET 8 SDKとInno Setup 6を用意し、`scripts/build.ps1` でビルドできます。依存ライブラリは[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)を参照してください。
+
+### 開発を応援する
+
+**[☕ コーヒー代で開発を応援する（note）](https://note.com/discreet/n/n3e2ee058b3bd)**
+
+気に入っていただけたら、記事末尾の「チップで応援する」から開発継続を応援していただけると嬉しいです。
 
 ## ライセンス
 
