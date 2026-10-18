@@ -22,7 +22,7 @@ internal sealed partial class MainForm
     List<KeywordEntry> _nativeKeys = [];
     List<Booking> _nativeBookings = [];
     List<AiEntry> _nativeAi = [];
-    Font? _nativeItalic;
+    Font? _nativeAiFont;
     string _nativeGuideStamp = "";
     bool _guideRefreshing;
     string _reservationReadStamp = "";
@@ -31,14 +31,14 @@ internal sealed partial class MainForm
     DateTimeOffset _nextGuideAttempt = DateTimeOffset.Now.AddSeconds(45);
     static readonly JsonSerializerOptions NativeJson = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, WriteIndented = true };
     internal sealed record KeywordEntry(int Order,string Id,bool Enabled,string Title,string Detail,string Stations,string Days,string Hours);
-    internal sealed record AiEntry(string ReservationId,string ProgramTitle,string SearchWord,string Reason,DateTimeOffset Start,string Station);
+    internal sealed record AiEntry(string ReservationId,string ProgramTitle,string SearchWord,string Reason,DateTimeOffset Start,string Station,string Source="local");
     sealed record GuideCache(DateTimeOffset Fetched,List<Show> Shows);
     static DataGridView NativeGrid() => new StableGrid() { Dock=DockStyle.Fill, ReadOnly=true, AllowUserToAddRows=false, AllowUserToDeleteRows=false, RowHeadersVisible=false, AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.None, SelectionMode=DataGridViewSelectionMode.FullRowSelect, MultiSelect=false, BackgroundColor=Color.White, BorderStyle=BorderStyle.None, AutoGenerateColumns=false, AllowUserToResizeRows=false, ColumnHeadersHeight=32, ColumnHeadersHeightSizeMode=DataGridViewColumnHeadersHeightSizeMode.DisableResizing, RowTemplate={Height=29}, ShowCellToolTips=true };
     static void Col(DataGridView g,string name,string title,int width,bool fill=false) { var c=new DataGridViewTextBoxColumn { Name=name,HeaderText=title,Width=width,SortMode=DataGridViewColumnSortMode.Programmatic }; if(fill){c.AutoSizeMode=DataGridViewAutoSizeColumnMode.Fill;c.MinimumWidth=220;}g.Columns.Add(c); }
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.1.0.12";
+        Text=$"TVRock Zoo — 予約・番組表 Ver.{Application.ProductVersion.Split('+')[0]}";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;
@@ -51,7 +51,7 @@ internal sealed partial class MainForm
         listbar.Controls.AddRange([edit,_includeDisabled,_includeFinishedBookings]); _includeDisabled.CheckedChanged+=(_,_)=>LoadNativeReservations();_includeFinishedBookings.CheckedChanged+=(_,_)=>LoadNativeReservations();
         listPage.Controls.Add(_nativeReservations);listPage.Controls.Add(listbar);
         Col(_nativeReservations,"enabled","状態",65);Col(_nativeReservations,"start","開始日時",210);Col(_nativeReservations,"end","長さ",90);Col(_nativeReservations,"station","局",80);Col(_nativeReservations,"word","検索ワード",240);Col(_nativeReservations,"title","番組名",500,true);
-        _nativeItalic=new Font("Meiryo UI",12,FontStyle.Bold|FontStyle.Italic);
+        _nativeAiFont=new Font("Meiryo UI",12,FontStyle.Regular);
         _nativeReservations.CellPainting+=PaintAiWord;
         _nativeReservations.CellDoubleClick+=async(_,e)=>{if(e.RowIndex>=0&&e.ColumnIndex!=0)await NativeEditBooking();};
         var searchbar=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(4)};
@@ -70,7 +70,7 @@ internal sealed partial class MainForm
         var keySearch=new Button{Text="検索ワードで探す",AutoSize=true};keySearch.Click+=(_,_)=>SearchNativeKeyword();
         var keyEdit=new Button{Text="条件を編集",AutoSize=true};keyEdit.Click+=async(_,_)=>{if(_nativeKeywords.CurrentRow?.Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
         InitializeConsult(keybar);keybar.Controls.AddRange([keySearch,keyEdit]); keysPage.Controls.Add(_nativeKeywords);keysPage.Controls.Add(keybar);
-        Col(_nativeKeywords,"order","順",55);Col(_nativeKeywords,"enabled","状態",65);Col(_nativeKeywords,"title","検索ワード",330);Col(_nativeKeywords,"detail","詳細条件",220);Col(_nativeKeywords,"station","局",180);Col(_nativeKeywords,"days","曜日",130);Col(_nativeKeywords,"hours","時間",100);Col(_nativeKeywords,"candidates","候補番組（参考）",340,true);
+        Col(_nativeKeywords,"order","順",55);Col(_nativeKeywords,"enabled","状態",65);Col(_nativeKeywords,"title","検索ワード",330);Col(_nativeKeywords,"detail","詳細条件",220);Col(_nativeKeywords,"station","局",180);Col(_nativeKeywords,"days","曜日",130);Col(_nativeKeywords,"hours","時間",100);Col(_nativeKeywords,"candidates","取得済み番組表内の候補",340,true);
         _nativeKeywords.CellDoubleClick+=async(_,e)=>{if(e.RowIndex>=0&&_nativeKeywords.Rows[e.RowIndex].Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
         foreach(var g in new[]{_nativeReservations,_nativeGuide,_nativeKeywords}) { g.DefaultCellStyle.Font=new Font("Meiryo UI",10);g.AlternatingRowsDefaultCellStyle.BackColor=Color.FromArgb(243,247,252);g.ColumnHeaderMouseClick+=(_,e)=>SortNativeGrid(g,e.ColumnIndex); }
         InitializeReadableDesign(toolbar);
@@ -129,7 +129,7 @@ internal sealed partial class MainForm
                 string word=keyword==null?"手動":string.IsNullOrWhiteSpace(keyword.Title)?keyword.Detail:keyword.Title;
                 int i=_nativeReservations.Rows.Add(b.Enabled?"○":"×",b.Start.LocalDateTime,(int)Math.Round((b.End-b.Start).TotalMinutes),b.Station,ai?.SearchWord??word,b.Title);
                 var row=_nativeReservations.Rows[i];row.Tag=b;row.Cells[1].Style.Format="MM/dd(ddd) HH:mm";row.Cells[2].Style.Format="0分";
-                if(ai!=null){row.Cells[4].Tag=ai;row.Cells[4].Style.Font=_nativeItalic;row.Cells[5].Style.Font=_nativeItalic;row.Cells[5].Style.ForeColor=Ink;row.Cells[4].ToolTipText="AIおすすめ（PC内で選定）\n"+ai.Reason;}
+                if(ai!=null){row.Cells[4].Tag=ai;row.Cells[4].Style.Font=_nativeAiFont;row.Cells[5].Style.Font=_nativeAiFont;row.Cells[5].Style.ForeColor=Ink;row.Cells[4].ToolTipText=(ai.Source=="gpt-preferences"?"GPTの好み条件を参考に、PC内で選んだおすすめ":"PC内で検索条件・予約履歴から選んだおすすめ")+"\n"+ai.Reason;}
                 row.Cells[3].Style.ForeColor=StationColor(b.Station);
                 if(b.Id==selected){row.Selected=true;_nativeReservations.CurrentCell=row.Cells[1];}
             }
@@ -146,13 +146,10 @@ internal sealed partial class MainForm
     }
     void PaintAiWord(object? sender,DataGridViewCellPaintingEventArgs e)
     {
-        if(e.RowIndex<0||e.ColumnIndex!=5||_nativeReservations.Rows[e.RowIndex].Cells[4].Tag is not AiEntry)return;
+        if(e.RowIndex<0||e.ColumnIndex!=5||_nativeReservations.Rows[e.RowIndex].Cells[4].Tag is not AiEntry ai)return;
         e.PaintBackground(e.ClipBounds,true);var state=e.Graphics!.Save();
-        var bounds=e.CellBounds; e.Graphics.SetClip(Rectangle.Intersect(e.ClipBounds,bounds));
-        // Shear the rendered Japanese glyphs as well as selecting an italic font.
-        using var matrix=new System.Drawing.Drawing2D.Matrix(1,0,-0.19f,1,bounds.Left+6+bounds.Height*0.19f,bounds.Top+e.CellStyle!.Padding.Top);
-        e.Graphics.Transform=matrix;using var brush=new SolidBrush(Ink);
-        e.Graphics.DrawString(Convert.ToString(e.FormattedValue),_nativeItalic!,brush,new RectangleF(0,0,bounds.Width-14,bounds.Height),StringFormat.GenericTypographic);e.Graphics.Restore(state);e.Paint(e.ClipBounds,DataGridViewPaintParts.Border);e.Handled=true;
+        try{e.Graphics.SetClip(Rectangle.Intersect(e.ClipBounds,e.CellBounds));var bounds=Rectangle.Inflate(e.CellBounds,-6,0);int used=AiBadgeRenderer.Draw(e.Graphics,e.CellStyle!.Font??_nativeReservations.Font,bounds,ai.Source=="gpt-preferences"?"GPT":"自動");bounds.X+=used+6;bounds.Width=Math.Max(0,bounds.Width-used-6);TextRenderer.DrawText(e.Graphics,Convert.ToString(e.FormattedValue)??"",_nativeAiFont!,bounds,e.CellStyle.ForeColor,TextFormatFlags.Left|TextFormatFlags.VerticalCenter|TextFormatFlags.SingleLine|TextFormatFlags.EndEllipsis|TextFormatFlags.NoPadding);}
+        finally{e.Graphics.Restore(state);}e.Paint(e.ClipBounds,DataGridViewPaintParts.Border);e.Handled=true;
     }
     void SearchNativeKeyword(){if(_nativeKeywords.CurrentRow?.Tag is not KeywordEntry k)return;_nativeQuery.Text=k.Title;_tabs.SelectedIndex=1;RenderNativeGuide();}
     internal static bool MatchesQuery(Show show,string query)
@@ -219,8 +216,8 @@ internal sealed partial class MainForm
         Show? s=selected??(_schedule.Visible?_schedule.Selected:_nativeGuide.CurrentRow?.Tag as Show);if(s==null){MessageBox.Show(this,"予約する番組をクリックして選択してください。");return;}
         if(s.Start<DateTimeOffset.Now.AddMinutes(2)){MessageBox.Show(this,"開始済み、または開始直前の番組です。番組表を更新してください。");return;}
         var bookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));if(bookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))){MessageBox.Show(this,"この放送は予約済みです。");return;}
-        var tuners=Data.Tuners(Path.Combine(RockFolder,"dtv.ini")).Tuners;int? device=Planner.FreeDevice(s,tuners,bookings.Where(b=>b.Enabled).ToList(),[]);
-        if(device==null){MessageBox.Show(this,s.Actions.Count==0?"この番組にはTVRockの予約リンクがありません。番組表を再取得し、TVRock側の設定も確認してください。":!tuners.Any(t=>s.Actions.ContainsKey(t.Device))?"番組表の予約先とdtv.iniのチューナー設定が一致しません。接続先・録画アプリ設定を確認してください。":"対応チューナーの予約時間が重複しています。開始前・終了後の録画時間や、別PCの予約も含めて確認してください。","予約先の確認");return;}
+        var deviceIds=Data.TunerDevices(await NativeGet("reg"));if(deviceIds.Count==0)throw new InvalidDataException("TVRockの予約画面からチューナー一覧を取得できません。詳細設定の「接続・チューナーを確認」を実行してください。");var tuners=Data.Tuners(Path.Combine(RockFolder,"dtv.ini"),deviceIds).Tuners;int? device=Planner.FreeDevice(s,tuners,bookings.Where(b=>b.Enabled).ToList(),[]);
+        if(device==null){MessageBox.Show(this,s.Actions.Count==0?"この番組にはTVRockの予約リンクがありません。番組表を再取得し、TVRock側の設定も確認してください。":!tuners.Any(t=>s.Actions.ContainsKey(t.Device))?"番組表と接続先のチューナーを照合できません。詳細設定の「接続・チューナーを確認」で結果を確認してください。":"対応チューナーの予約時間が重複しています。開始前・終了後の録画時間や、別PCの予約も含めて確認してください。","予約先の確認");return;}
         if(!s.Actions.TryGetValue(device.Value,out string? action)){MessageBox.Show(this,"予約リンクがありません。番組表を更新してください。");return;}
         _nativeStatus.Text="予約を確認中："+s.Title;UseWaitCursor=true;
             // Verify the live guide's event and time before using a cached action.

@@ -16,7 +16,7 @@ internal sealed partial class MainForm
             grid.CellFormatting+=(_,e)=>{
                 if(e.RowIndex<0||grid.Rows[e.RowIndex].Tag is not Booking b)return;
                 if(!b.Enabled){e.CellStyle.BackColor=Color.FromArgb(247,247,247);e.CellStyle.ForeColor=Color.FromArgb(100,108,116);}
-                if(IsRecordingWindow(b,DateTimeOffset.Now)){e.CellStyle.BackColor=Color.FromArgb(255,236,236);e.CellStyle.SelectionBackColor=Color.FromArgb(249,215,215);}
+                if(IsRecordingWindow(b,DateTimeOffset.Now)){e.CellStyle.BackColor=Color.FromArgb(255,229,229);e.CellStyle.SelectionBackColor=Color.FromArgb(249,208,208);}
             };
             FitReservationColumns(grid);
         }
@@ -39,8 +39,11 @@ internal sealed partial class MainForm
             foreach(var id in states.Keys.Where(id=>!ids.Contains(id)).ToArray())states.Remove(id);
             if(removed){ApplyDatePartitions(grid);UpdateDisabledCaption();_engineStatus.Text=$"予約 {_nativeReservations.Rows.Count}件 / 録画: TVRock";}
         }
+        if(changed>0)_schedule.Invalidate();
+        _recordingIndicator?.Update(RecordingActivities(_nativeBookings,now),"（予約時刻基準）");
         return changed;
     }
+    internal static ZooRecording.RecordingActivity[] RecordingActivities(IEnumerable<Booking> bookings,DateTimeOffset now)=>bookings.Where(b=>{var timing=RecordingTiming.Current(b);return b.Enabled&&b.Start.AddSeconds(timing.Head)<=now&&b.End.AddSeconds(timing.Tail)>now;}).DistinctBy(b=>b.Id).Select(b=>new ZooRecording.RecordingActivity(b.Station,b.Title,b.End.AddSeconds(RecordingTiming.Current(b).Tail))).ToArray();
     void FitReservationColumns(DataGridView grid)
     {
         if(_fittingReservationColumns||!grid.Columns.Contains("title")||grid.ClientSize.Width<100)return;

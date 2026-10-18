@@ -29,8 +29,9 @@ internal sealed partial class MainForm
         var content=new FlowLayoutPanel{Dock=DockStyle.Top,Height=280,AutoSize=false,FlowDirection=FlowDirection.TopDown,Padding=new Padding(24)};
         var title=new Label{Text="詳細設定",AutoSize=true,Font=new Font(Font.FontFamily,14,FontStyle.Bold)};
         var explanation=new Label{Text="予約の詳細編集・TVRockの設定を、この画面から開けます。",AutoSize=true,Margin=new Padding(0,12,0,12)};
-        var open=new Button{Text="TVRockの設定画面を開く",AutoSize=true};var state=new Label{AutoSize=true,Text="おすすめは3日ごと・最大20件。自動実行は上部のON／OFFで切り替えます。",Margin=new Padding(0,15,0,0)};
-        content.Controls.AddRange([title,explanation,open,state]);_detailLanding.Controls.Add(content);StyleControls(content);
+        var open=new Button{Text="TVRockのWeb画面を開く",AutoSize=true};var state=new Label{AutoSize=true,Text="おすすめは3日ごと・最大20件。自動実行は上部のON／OFFで切り替えます。",Margin=new Padding(0,15,0,0)};
+        var tunerCheck=new Button{Text="接続・チューナーを確認",AutoSize=true};tunerCheck.Click+=async(_,_)=>await ShowTunerDiagnostics();
+        content.Controls.AddRange([title,explanation,open,tunerCheck,state]);_detailLanding.Controls.Add(content);StyleControls(content);
         open.Click+=async(_,_)=>{_detailLanding.Visible=false;await OpenNativeLegacy("kwl");};
         var connection=new Label{Dock=DockStyle.Bottom,Height=30,Text="",ForeColor=Color.FromArgb(120,52,25)};detailPage.Controls.Add(connection);
         _webBrowser.NavigationStarting+=(_,_)=>{connection.Text="TVRockを読み込んでいます…";};

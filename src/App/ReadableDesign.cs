@@ -12,7 +12,7 @@ internal sealed partial class MainForm
     float _readingSize=10;
     readonly List<Font> _readingFonts=[];
     static readonly Color Ink=Color.FromArgb(23,42,62);
-    static readonly Color Accent=Color.FromArgb(67,78,158);
+    static readonly Color Accent=Color.FromArgb(135,143,193);
     void InitializeReadableDesign(FlowLayoutPanel toolbar)
     {
         var baseFont=new Font("Meiryo UI",10);_readingFonts.Add(baseFont);Font=baseFont;
@@ -61,7 +61,7 @@ internal sealed partial class MainForm
     {
         width=Math.Max(40,width);float y=0,maxWidth=0;int lineIndex=0;bool guideHeader=System.Text.RegularExpressions.Regex.IsMatch(text,@"^.+\d{2}/\d{2} \d{2}:\d{2}");
         foreach(string line in text.Replace("\r","").Split('\n')){
-            int index=lineIndex++;if(line.Length==0){y+=body.GetHeight(graphics)*.5f;continue;}var lineFont=(guideHeader&&index<2)||line.StartsWith("AIおすすめ")?keyword:body;
+            int index=lineIndex++;if(line.Length==0){y+=body.GetHeight(graphics)*.5f;continue;}var lineFont=(guideHeader&&index<2)||(line.StartsWith("AIおすすめ")||line.StartsWith("おすすめの理由"))?keyword:body;
             const string label="検索ワード：";
             if(line.StartsWith(label,StringComparison.Ordinal)){
                 float prefix=Math.Min(width-20,graphics.MeasureString(label,body).Width);
@@ -85,7 +85,7 @@ internal sealed partial class MainForm
     }
     void StyleControls(Control root)
     {
-        if(root is Button button){RoundedControls.Apply(button);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=button==_recommend?Accent:(button.Text is "一覧を更新" or "文字 −" or "文字 ＋" or "元に戻す"?Color.FromArgb(237,239,242):Color.FromArgb(231,238,247));button.ForeColor=button==_recommend?Color.White:Ink;button.Padding=new Padding(9,4,9,4);button.Margin=new Padding(4,3,8,3);button.Cursor=Cursors.Hand;button.MinimumSize=new Size(0,33);}
+        if(root is Button button){RoundedControls.Apply(button);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=button==_recommend?_recommendToggle.BackColor:(button.Text is "一覧を更新" or "文字 −" or "文字 ＋" or "元に戻す"?Color.FromArgb(237,239,242):Color.FromArgb(231,238,247));button.ForeColor=Ink;button.Padding=new Padding(9,4,9,4);button.Margin=new Padding(4,3,8,3);button.Cursor=Cursors.Hand;button.MinimumSize=new Size(0,33);}
         if(root is CheckBox check){check.ForeColor=Ink;check.Margin=new Padding(8,6,10,4);}
         if(root is FlowLayoutPanel flow){flow.BackColor=Color.White;flow.Padding=new Padding(4,4,4,5);}
         foreach(Control child in root.Controls)StyleControls(child);
@@ -111,7 +111,7 @@ internal sealed partial class MainForm
             var parts=new List<string>();
             parts.Add(!string.IsNullOrWhiteSpace(show?.Description)?show.Description:"番組説明を取得できていません。番組表を更新してください。");
             if(row.Tag is TsRecommend.Booking timed){var margins=RecordingTiming.Current(timed);parts.Add($"録画時間：開始 {margins.Head:+0;-0;0}秒・終了 {margins.Tail:+0;-0;0}秒");}
-            if(ai!=null)parts.Add("AIおすすめの理由\n"+ai.Reason);
+            if(ai!=null)parts.Add((ai.Source=="gpt-preferences"?"おすすめの理由（GPTの条件を参考）":"おすすめの理由（PC内で選定）")+"\n"+ai.Reason);
             if(!string.IsNullOrWhiteSpace(word)&&word!="手動")parts.Add("検索ワード："+word);
             return string.Join("\n\n",parts);
         }
@@ -122,10 +122,10 @@ internal sealed partial class MainForm
     void ApplyReadingSize(float size,bool save)
     {
         _readingSize=Math.Clamp(size,10,18);var regular=new Font("Meiryo UI",_readingSize);var bold=new Font("Meiryo UI",_readingSize,FontStyle.Bold);_readingFonts.Add(regular);_readingFonts.Add(bold);
-        var previous=_nativeItalic;_nativeItalic=new Font("Meiryo UI",_readingSize,FontStyle.Bold|FontStyle.Italic);
+        var previous=_nativeAiFont;_nativeAiFont=new Font("Meiryo UI",_readingSize,FontStyle.Regular);
         foreach(var grid in new[]{_nativeReservations,_nativeGuide,_nativeKeywords,_disabledReservations}){
             grid.DefaultCellStyle.Font=regular;grid.ColumnHeadersDefaultCellStyle.Font=bold;grid.ColumnHeadersHeight=regular.Height+6;grid.RowTemplate.Height=regular.Height+5;
-            foreach(DataGridViewRow row in grid.Rows){row.Height=regular.Height+5;if(grid==_nativeReservations&&row.Cells[4].Tag is AiEntry){row.Cells[4].Style.Font=_nativeItalic;row.Cells[5].Style.Font=_nativeItalic;}}
+            foreach(DataGridViewRow row in grid.Rows){row.Height=regular.Height+5;if(grid==_nativeReservations&&row.Cells[4].Tag is AiEntry){row.Cells[4].Style.Font=_nativeAiFont;row.Cells[5].Style.Font=_nativeAiFont;}}
         }
         _nativeReservations.Columns[1].Width=(int)(230*_readingSize/12);_nativeReservations.Columns[2].Width=100;_nativeReservations.Columns[3].Width=100;_nativeReservations.Columns[4].Width=(int)(285*_readingSize/12);
         _nativeGuide.Columns[0].Width=(int)(230*_readingSize/12);_nativeGuide.Columns[1].Width=100;_nativeGuide.Columns[2].Width=100;

@@ -4,7 +4,7 @@ internal sealed partial class MainForm
 {
     void InitializeConnections(FlowLayoutPanel toolbar)
     {
-        var button=new Button{Text="接続先："+ConnectionProfiles.Current.Active.Name,AutoSize=true};_detailLanding.Controls.OfType<FlowLayoutPanel>().First().Controls.Add(button);Text=$"TVRock Zoo — {ConnectionProfiles.Current.Active.Name} — 予約・番組表 Ver.1.0.12";StyleControls(button);
+        var button=new Button{Text="接続先："+ConnectionProfiles.Current.Active.Name,AutoSize=true};_detailLanding.Controls.OfType<FlowLayoutPanel>().First().Controls.Add(button);Text=$"TVRock Zoo — {ConnectionProfiles.Current.Active.Name} — 予約・番組表 Ver.{Application.ProductVersion.Split('+')[0]}";StyleControls(button);
         button.Click+=(_,_)=>{
             using var dialog=new Form{Text="TVRockの接続先",ClientSize=new Size(650,350),Font=Font,StartPosition=FormStartPosition.CenterParent,MinimumSize=new Size(600,390)};
             var panel=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(18),ColumnCount=2,RowCount=6};panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,140));panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));dialog.Controls.Add(panel);
