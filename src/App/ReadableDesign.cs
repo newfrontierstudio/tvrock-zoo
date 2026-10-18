@@ -12,7 +12,7 @@ internal sealed partial class MainForm
     float _readingSize=10;
     readonly List<Font> _readingFonts=[];
     static readonly Color Ink=Color.FromArgb(23,42,62);
-    static readonly Color Accent=Color.FromArgb(135,143,193);
+    static readonly Color Accent=Color.FromArgb(152,159,202);
     void InitializeReadableDesign(FlowLayoutPanel toolbar)
     {
         var baseFont=new Font("Meiryo UI",10);_readingFonts.Add(baseFont);Font=baseFont;
