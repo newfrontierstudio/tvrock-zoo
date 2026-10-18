@@ -11,7 +11,7 @@ internal sealed partial class MainForm
             _webBrowser.CoreWebView2.WebMessageReceived+=async(_,message)=>{
                 if(_keywordDeleteSending)return;
                 try {
-                    var origin=Zoo.RuntimeConfiguration.BaseUri;
+                    var origin=ConnectionProfiles.Current.Active.BaseUri;
                     if(!Uri.TryCreate(message.Source,UriKind.Absolute,out var source)||source.Authority!=origin.Authority||source.Scheme!=origin.Scheme||source.AbsolutePath!=origin.AbsolutePath+"kwl")return;
                     using var json=JsonDocument.Parse(message.WebMessageAsJson);
                     if(!json.RootElement.TryGetProperty("type",out var type)||type.GetString()!="zoo-keyword-delete")return;
@@ -26,7 +26,7 @@ internal sealed partial class MainForm
                     if(!removed)throw new IOException("削除の反映を確認できませんでした。二重送信はせず、一覧を読み直します。",transport);
                     LoadNativeData();
                     _webBrowser.CoreWebView2.Navigate(new Uri(origin,"kwl").AbsoluteUri);
-                }catch(Exception error){Log("自動検索予約の削除: "+error);MessageBox.Show(this,error.Message,"自動検索予約の削除");_webBrowser.CoreWebView2.Navigate(new Uri(Zoo.RuntimeConfiguration.BaseUri,"kwl").AbsoluteUri);}
+                }catch(Exception error){Log("自動検索予約の削除: "+error);MessageBox.Show(this,error.Message,"自動検索予約の削除");_webBrowser.CoreWebView2.Navigate(new Uri(ConnectionProfiles.Current.Active.BaseUri,"kwl").AbsoluteUri);}
                 finally{_keywordDeleteSending=false;}
             };
         };

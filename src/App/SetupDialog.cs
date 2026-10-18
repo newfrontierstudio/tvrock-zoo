@@ -13,8 +13,8 @@ internal sealed class SetupDialog : Form
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false; MinimizeBox = false;
-        var config = Zoo.RuntimeConfiguration.Current;
-        folder.Text = config.TvRockFolder; address.Text = config.TvRockUrl;
+        var config = TsRecommend.ConnectionProfiles.Current.Active;
+        folder.Text = config.Folder; address.Text = config.Url;
         if (folder.Text.Length == 0) {
             foreach (var process in System.Diagnostics.Process.GetProcessesByName("TVRock"))
                 using (process) try {
@@ -35,16 +35,16 @@ internal sealed class SetupDialog : Form
         layout.Controls.Add(note, 0, 3); layout.SetColumnSpan(note, 3);
         var save = new Button { Text = "保存して続ける", AutoSize = true };
         save.Click += (_, _) => {
-            var updated = new Zoo.RuntimeConfiguration { TvRockFolder = folder.Text.Trim(), TvRockUrl = Zoo.RuntimeConfiguration.NormalizeUrl(address.Text) };
-            if (updated.Validate() is string error) { MessageBox.Show(this, error, "接続設定"); return; }
-            try { updated.Save(); DialogResult = DialogResult.OK; Close(); } catch (Exception e) { MessageBox.Show(this, e.Message); }
+            var updated = new TsRecommend.ConnectionProfile { Folder = folder.Text.Trim(), Url = TsRecommend.ConnectionProfile.Normalize(address.Text) };
+            try{updated.Validate();}catch(Exception error){MessageBox.Show(this,error.Message,"接続設定");return;}
+            try { var profiles=TsRecommend.ConnectionProfiles.Read();profiles.Profiles[profiles.Profiles.FindIndex(p=>p.Id==profiles.ActiveId)]=updated;profiles.ActiveId=updated.Id;profiles.Save(); DialogResult = DialogResult.OK; Close(); } catch (Exception e) { MessageBox.Show(this, e.Message); }
         };
         layout.Controls.Add(save, 1, 4); Controls.Add(layout); AcceptButton = save;
         foreach(var button in new[]{browse,save}){button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=Color.FromArgb(231,238,247);RoundedControls.Apply(button);}
     }
     internal static bool EnsureConfigured()
     {
-        if (Zoo.RuntimeConfiguration.Current.Validate() == null) return true;
+        try{TsRecommend.ConnectionProfiles.Current.Active.Validate();return true;}catch(Exception error) when(error is InvalidDataException or IOException or UnauthorizedAccessException){}
         using var dialog = new SetupDialog();
         if (dialog.ShowDialog() != DialogResult.OK) return false;
         // Reload the saved configuration before creating the main window.

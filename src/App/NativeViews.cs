@@ -7,7 +7,7 @@ namespace TsScheduler;
 
 internal sealed partial class MainForm
 {
-    internal static string RockFolder => Zoo.RuntimeConfiguration.Current.TvRockFolder;
+    internal static string RockFolder => ConnectionProfiles.Current.Active.Folder;
     readonly DataGridView _nativeReservations = NativeGrid();
     readonly DataGridView _nativeGuide = NativeGrid();
     readonly DataGridView _nativeKeywords = NativeGrid();
@@ -38,7 +38,7 @@ internal sealed partial class MainForm
     void InitializeNativeViews(FlowLayoutPanel toolbar)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Text="TVRock Zoo — 予約・番組表 Ver.1.0.7";
+        Text="TVRock Zoo — 予約・番組表 Ver.1.0.12";
         _openWeb.Text="詳細設定"; _webAddress.Visible=false; _import.Visible=false;_editReservation.Visible=false;_scheduler.Visible=false;
         _engineStatus.Text="録画: TVRock";
         foreach(TabPage p in _tabs.TabPages) p.Text="詳細: "+p.Text;
@@ -82,7 +82,7 @@ internal sealed partial class MainForm
         InitializeReservationSwitches(listPage);
         InitializeStationBadges();
         InitializeRecordingTiming();
-        InitializeWorkspacePreferences(toolbar,listPage);
+        InitializeWorkspacePreferences(toolbar,listPage);InitializeConnections(toolbar);InitializeDisplayOptions();
         _nativeKeywords.Columns["enabled"].Visible=false;
         foreach(var grid in new[]{_nativeReservations,_disabledReservations,_nativeGuide,_nativeKeywords})grid.CellFormatting+=(_,e)=>{if(e.ColumnIndex>=0&&grid.Columns[e.ColumnIndex].Name=="station"&&e.Value is string text)e.Value=text.Replace("MX1","MX");};
         _nativeStation.FormattingEnabled=true;
@@ -140,7 +140,7 @@ internal sealed partial class MainForm
             ApplyDatePartitions(_nativeReservations);
             LoadDisabledReservations();
             _reservationReadStamp=ReservationStamp();_reservationDisplayStamp=displayStamp;
-            _nextReservationBoundary=NextReservationBoundary(_nativeBookings,DateTimeOffset.Now);
+            _nextReservationBoundary=NextReservationBoundary(_nativeBookings,DateTimeOffset.Now);if(_nativeShows.Count>0)RenderSchedule();
             _engineStatus.Text=$"予約 {_nativeReservations.Rows.Count}件 / 録画: TVRock";
         }catch(IOException e){_engineStatus.Text="予約の再読込待ち: "+e.Message;}catch(JsonException e){_engineStatus.Text="おすすめ記録の読込失敗: "+e.Message;}
     }
@@ -185,12 +185,12 @@ internal sealed partial class MainForm
             var matches=_nativeShows.Where(s=>(_includePast.Checked||s.End>DateTimeOffset.Now)&&(_nativeStation.SelectedIndex<=0||s.Station==Convert.ToString(_nativeStation.SelectedItem))&&MatchesQuery(s,_nativeQuery.Text)).OrderBy(s=>s.Start).ToList();
             _nativeGuide.Rows.Clear();foreach(var s in matches){bool booked=_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b));int i=_nativeGuide.Rows.Add(s.Start.LocalDateTime,s.End.ToLocalTime().ToString("HH:mm"),s.Station,booked?"予約済":"",s.Title);var row=_nativeGuide.Rows[i];row.Tag=s;row.Cells[0].Style.Format="MM/dd(ddd) HH:mm";row.Cells[4].ToolTipText=s.Description;row.Cells[2].Style.ForeColor=StationColor(s.Station);}
             ApplyDatePartitions(_nativeGuide);RenderSchedule();
-            _nativeStatus.Text=$"{matches.Count}件 / 保存済み番組表 {_nativeShows.Count}件・取得 {_nativeGuideStamp}　検索は再放送マークも対象";
+            _nativeStatus.Text=$"{matches.Count}件 / 保存済み番組表 {_nativeShows.Count}件・取得 {_nativeGuideStamp}　"+Data.ServiceWarnings(Path.Combine(RockFolder,"dtv.ini"));
         }catch(ArgumentException){_nativeStatus.Text="検索式が正しくありません。括弧などを確認してください。";}catch(RegexMatchTimeoutException){_nativeStatus.Text="検索式が複雑すぎます。短い式で検索してください。";}
     }
     internal static async Task<string> NativeGet(string relative)
     {
-        var uri=new Uri(Zoo.RuntimeConfiguration.BaseUri,relative);if(!Zoo.RuntimeConfiguration.IsAllowed(uri))throw new InvalidOperationException("接続先がTVRockではありません。");
+        var uri=new Uri(ConnectionProfiles.Current.Active.BaseUri,relative);if(!ConnectionProfiles.Current.Active.Allows(uri))throw new InvalidOperationException("接続先がTVRockではありません。");
         return await TvRockHttp.Get(uri);
     }
     async Task RefreshNativeGuide()
@@ -203,7 +203,7 @@ internal sealed partial class MainForm
     }
     async Task OpenNativeLegacy(string relative)
     {
-        try{_tabs.SelectedTab=_tabs.TabPages.Cast<TabPage>().First(p=>p.Controls.Contains(_webBrowser));await _webBrowser.EnsureCoreWebView2Async();_detailLanding.Visible=false;_webBrowser.Visible=true;_webBrowser.BringToFront();_webBrowser.CoreWebView2.Navigate(new Uri(Zoo.RuntimeConfiguration.BaseUri,relative).AbsoluteUri);}catch(Exception e){_detailLanding.Visible=true;MessageBox.Show(this,e.Message,"詳細設定");}
+        try{_tabs.SelectedTab=_tabs.TabPages.Cast<TabPage>().First(p=>p.Controls.Contains(_webBrowser));await _webBrowser.EnsureCoreWebView2Async();_detailLanding.Visible=false;_webBrowser.Visible=true;_webBrowser.BringToFront();_webBrowser.CoreWebView2.Navigate(new Uri(ConnectionProfiles.Current.Active.BaseUri,relative).AbsoluteUri);}catch(Exception e){_detailLanding.Visible=true;MessageBox.Show(this,e.Message,"詳細設定");}
     }
     async Task NativeEditBooking()
     {
@@ -220,7 +220,7 @@ internal sealed partial class MainForm
         if(s.Start<DateTimeOffset.Now.AddMinutes(2)){MessageBox.Show(this,"開始済み、または開始直前の番組です。番組表を更新してください。");return;}
         var bookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));if(bookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))){MessageBox.Show(this,"この放送は予約済みです。");return;}
         var tuners=Data.Tuners(Path.Combine(RockFolder,"dtv.ini")).Tuners;int? device=Planner.FreeDevice(s,tuners,bookings.Where(b=>b.Enabled).ToList(),[]);
-        if(device==null){MessageBox.Show(this,"空きチューナーがありません。");return;}
+        if(device==null){MessageBox.Show(this,s.Actions.Count==0?"この番組にはTVRockの予約リンクがありません。番組表を再取得し、TVRock側の設定も確認してください。":!tuners.Any(t=>s.Actions.ContainsKey(t.Device))?"番組表の予約先とdtv.iniのチューナー設定が一致しません。接続先・録画アプリ設定を確認してください。":"対応チューナーの予約時間が重複しています。開始前・終了後の録画時間や、別PCの予約も含めて確認してください。","予約先の確認");return;}
         if(!s.Actions.TryGetValue(device.Value,out string? action)){MessageBox.Show(this,"予約リンクがありません。番組表を更新してください。");return;}
         _nativeStatus.Text="予約を確認中："+s.Title;UseWaitCursor=true;
             // Verify the live guide's event and time before using a cached action.
@@ -236,5 +236,3 @@ internal sealed partial class MainForm
         }catch(Exception e){_nativeStatus.Text="予約を完了できませんでした："+e.Message;MessageBox.Show(this,e.Message,"予約を完了できませんでした");}finally{_manualBookingBusy=false;UseWaitCursor=false;}
     }
 }
-
-

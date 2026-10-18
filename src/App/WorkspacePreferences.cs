@@ -26,7 +26,7 @@ internal sealed partial class MainForm
         _foldDisabled.Click+=(_,_)=>{SetDisabledCollapsed(!_disabledCollapsed);QueueLayoutSave();};
         foreach(var item in LayoutGrids()){
             var grid=item.Grid;grid.AllowUserToResizeColumns=true;
-            grid.CellPainting+=(_,e)=>{if(e.RowIndex!=-1||e.ColumnIndex<0)return;e.Paint(e.ClipBounds,DataGridViewPaintParts.All);using var pen=new Pen(Color.White,2);e.Graphics!.DrawLine(pen,e.CellBounds.Right-1,e.CellBounds.Top+3,e.CellBounds.Right-1,e.CellBounds.Bottom-3);e.Handled=true;};
+            grid.CellPainting+=(_,e)=>{if(e.RowIndex!=-1||e.ColumnIndex<0)return;e.Paint(e.ClipBounds,DataGridViewPaintParts.All);using var pen=new Pen(Color.White,2);e.Graphics!.DrawLine(pen,e.CellBounds.Right-1,e.CellBounds.Top+5,e.CellBounds.Right-1,e.CellBounds.Bottom-5);e.Handled=true;};
             grid.ColumnWidthChanged+=(_,_)=>QueueLayoutSave();grid.Scroll+=(_,_)=>QueueLayoutSave();
         }
         _tabs.SelectedIndexChanged+=(_,_)=>{QueueLayoutSave();if(_layoutReady)BeginInvoke(new Action(RestorePendingScroll));};_scheduleDate.ValueChanged+=(_,_)=>QueueLayoutSave();_schedule.ViewChanged+=QueueLayoutSave;

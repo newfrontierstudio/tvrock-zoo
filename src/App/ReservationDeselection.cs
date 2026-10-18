@@ -6,7 +6,7 @@ internal sealed partial class MainForm
     {
         var filter=new ReservationClickFilter(this);Application.AddMessageFilter(filter);
         Disposed+=(_,_)=>Application.RemoveMessageFilter(filter);
-        Deactivate+=(_,_)=>{ClearReservationSelection(_nativeReservations);ClearReservationSelection(_disabledReservations);};
+        Deactivate+=(_,_)=>{ClearReservationSelection(_nativeReservations);ClearReservationSelection(_disabledReservations);_schedule.Selected=null;_schedule.Invalidate();};
     }
     sealed class ReservationClickFilter(MainForm owner):IMessageFilter
     {
@@ -15,6 +15,7 @@ internal sealed partial class MainForm
             if(message.Msg!=0x0201||owner.IsDisposed)return false;
             var clicked=Control.FromChildHandle(message.HWnd);
             if(clicked==null||clicked.FindForm()!=owner)return false;
+            if(clicked!=owner._schedule){owner._schedule.Selected=null;owner._schedule.Invalidate();}
             foreach(var grid in new[]{owner._nativeReservations,owner._disabledReservations}){
                 bool inside=clicked==grid||grid.Contains(clicked);
                 if(!inside){ClearReservationSelection(grid);continue;}

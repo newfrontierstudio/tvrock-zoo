@@ -1,3 +1,4 @@
+using TsRecommend;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 using System.Text;
@@ -12,7 +13,7 @@ internal sealed partial class MainForm : Form
     private readonly ListBox _activity = new() { Dock = DockStyle.Fill };
     private readonly Button _import = new() { Text = "TVRockデータを読み込む", AutoSize = true };
     private readonly Button _scheduler = new() { Text = "スケジューラ開始", AutoSize = true, Enabled = false };
-    private readonly TextBox _webAddress = new() { Text = new Uri(Zoo.RuntimeConfiguration.BaseUri,"list").AbsoluteUri, Width = 300 };
+    private readonly TextBox _webAddress = new() { Text = new Uri(ConnectionProfiles.Current.Active.BaseUri,"list").AbsoluteUri, Width = 300 };
     private readonly Button _openWeb = new() { Text = "TVRock Webを開く", AutoSize = true };
     private readonly Button _editReservation = new() { Text = "選択した予約を編集", AutoSize = true, Enabled = false };
     private readonly Label _engineStatus = new() { AutoSize = true, Text = "録画エンジン: 未接続（予約の確認のみ）" };
@@ -38,7 +39,7 @@ internal sealed partial class MainForm : Form
     public MainForm(bool startInTray)
     {
         _startInTray = startInTray;
-        Text = "TVRock Zoo — 予約・番組表 Ver.1.0.5";
+        Text = "TVRock Zoo — 予約・番組表 Ver.1.0.12";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(1080, 700);
         MinimumSize = new Size(780, 520);
@@ -91,7 +92,7 @@ internal sealed partial class MainForm : Form
         Shown += (_, _) => StartInTrayIfRequested();
     }
 
-    private static string RecommendationHome => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TVRockZoo");
+    private static string RecommendationHome => ConnectionProfiles.Current.Active.Home;
     private void InitializeRecommendations()
     {
         var menu = new ContextMenuStrip();
@@ -103,7 +104,6 @@ internal sealed partial class MainForm : Form
         _recommendToggle.CheckedChanged += (_, _) => { if(enabled.Checked != _recommendToggle.Checked) enabled.Checked = _recommendToggle.Checked; };
         Shown += (_, _) => ShowMode(); ShowMode();
         menu.Items.Add(enabled);
-        menu.Items.Add("接続設定", null, (_, _) => { using var dialog = new SetupDialog(); if(dialog.ShowDialog(this)==DialogResult.OK) MessageBox.Show(this,"設定を保存しました。アプリを終了して起動し直してください。","接続設定"); });
         menu.Items.Add("おすすめの履歴", null, (_, _) => { Directory.CreateDirectory(Path.Combine(RecommendationHome,"recommend-history")); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.Combine(RecommendationHome,"recommend-history")){UseShellExecute=true}); });
         _recommend.ContextMenuStrip = menu;
         _recommend.Click += async (_, _) => await RunRecommendationsAsync();
@@ -125,7 +125,7 @@ internal sealed partial class MainForm : Form
             var stamp = root.GetProperty("time").GetString() ?? "";
             _recommendTip.SetToolTip(_recommend,message+"\n3日ごとに最大20件。右クリックで履歴と自動実行の設定。");
             if(stamp!=_lastRecommendationStamp && root.GetProperty("state").GetString()=="complete")
-            { if(_webBrowser.Source?.AbsolutePath==new Uri(Zoo.RuntimeConfiguration.BaseUri,"list").AbsolutePath) _webBrowser.CoreWebView2?.Reload(); }
+            { if(_webBrowser.Source?.AbsolutePath==new Uri(ConnectionProfiles.Current.Active.BaseUri,"list").AbsolutePath) _webBrowser.CoreWebView2?.Reload(); }
             if(stamp!=_lastRecommendationStamp) LoadNativeReservations();
             _lastRecommendationStamp=stamp;
         }
@@ -147,7 +147,7 @@ internal sealed partial class MainForm : Form
         {
             using var process=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(executable,scheduled?"--apply --scheduled":"--apply"){UseShellExecute=false,CreateNoWindow=true,WindowStyle=System.Diagnostics.ProcessWindowStyle.Hidden,WorkingDirectory=Path.GetDirectoryName(executable)})!;
             await process.WaitForExitAsync();RefreshRecommendationStatus();
-            if(!scheduled && process.ExitCode!=0)MessageBox.Show(this,"おすすめ処理を完了できませんでした。ボタンにマウスを置くと詳細を確認できます。","おすすめ更新");
+            if(!scheduled && process.ExitCode!=0){string message="おすすめ処理を停止しました。";try{using var status=System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(RecommendationHome,"recommend-status.json")));message=status.RootElement.GetProperty("message").GetString()??message;}catch{}MessageBox.Show(this,message.Replace("\\n",Environment.NewLine),"おすすめ更新");}
         }
         catch(Exception error){if(scheduled)Log("おすすめ自動実行に失敗: "+error.Message);else MessageBox.Show(this,error.Message,"おすすめ更新");}
         finally{_recommend.Text="おすすめ更新";_recommend.Enabled=true;}
@@ -199,7 +199,7 @@ internal sealed partial class MainForm : Form
                     window.addEventListener('DOMContentLoaded', () => {
                       window.__applyTsSchedulerStyle?.();
                     });
-                    """.Replace("/user/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath));
+                    """.Replace("/user/",ConnectionProfiles.Current.Active.BaseUri.AbsolutePath));
                 _webStyleInstalled = true;
             }
             _webBrowser.CoreWebView2.Navigate(address.AbsoluteUri);
@@ -216,7 +216,7 @@ internal sealed partial class MainForm : Form
         try
         {
             await browser.EnsureCoreWebView2Async();
-            browser.CoreWebView2.Navigate(new Uri(Zoo.RuntimeConfiguration.BaseUri, page).AbsoluteUri);
+            browser.CoreWebView2.Navigate(new Uri(ConnectionProfiles.Current.Active.BaseUri,page).AbsoluteUri);
         }
         catch (Exception error)
         {
@@ -425,21 +425,21 @@ internal sealed partial class MainForm : Form
                     }
                   }
                 })();
-                """);
+                """.Replace("/user/",ConnectionProfiles.Current.Active.BaseUri.AbsolutePath));
         if (e.IsSuccess && browser.CoreWebView2 is not null)
         {
             using var stream = typeof(MainForm).Assembly.GetManifestResourceStream("TsScheduler.ReservationUi.js");
             if (stream is not null)
             {
                 using var reader = new StreamReader(stream);
-                await browser.CoreWebView2.ExecuteScriptAsync((await reader.ReadToEndAsync()).Replace("/user/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath));
+                await browser.CoreWebView2.ExecuteScriptAsync((await reader.ReadToEndAsync()).Replace("/user/",ConnectionProfiles.Current.Active.BaseUri.AbsolutePath));
             }
         }
-        if (e.IsSuccess && browser.CoreWebView2 is not null && browser.Source?.AbsolutePath == new Uri(Zoo.RuntimeConfiguration.BaseUri,"list").AbsolutePath)
+        if (e.IsSuccess && browser.CoreWebView2 is not null && browser.Source?.AbsolutePath == new Uri(ConnectionProfiles.Current.Active.BaseUri,"list").AbsolutePath)
         {
             try
             {
-                var file = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TVRockZoo", "ai-recommendations.json");
+                var file = Path.Combine(RecommendationHome,"ai-recommendations.json");
                 var entries = File.Exists(file) ? System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(await File.ReadAllTextAsync(file)) : System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("[]");
                 if (entries.ValueKind != System.Text.Json.JsonValueKind.Array) throw new InvalidDataException("AIおすすめの記録形式が正しくありません。");
                 await browser.CoreWebView2.ExecuteScriptAsync("window.__tsAiRecommendations = " + entries.GetRawText() + ";");
@@ -448,7 +448,7 @@ internal sealed partial class MainForm : Form
                 if(suppressed.ValueKind==System.Text.Json.JsonValueKind.Array)
                     await browser.CoreWebView2.ExecuteScriptAsync("window.__tsDuplicateSuppressions = "+suppressed.GetRawText()+";");
                 using var resource = typeof(MainForm).Assembly.GetManifestResourceStream("TsScheduler.AiRecommendationUi.js");
-                if (resource is not null) { using var reader = new StreamReader(resource); await browser.CoreWebView2.ExecuteScriptAsync((await reader.ReadToEndAsync()).Replace("/user/",Zoo.RuntimeConfiguration.BaseUri.AbsolutePath)); }
+                if (resource is not null) { using var reader = new StreamReader(resource); await browser.CoreWebView2.ExecuteScriptAsync((await reader.ReadToEndAsync()).Replace("/user/",ConnectionProfiles.Current.Active.BaseUri.AbsolutePath)); }
             }
             catch (Exception error) { Log("AIおすすめ表示の読み込みに失敗: " + error.Message); }
         }
@@ -542,7 +542,7 @@ internal sealed partial class MainForm : Form
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("終了", null, (_, _) => ExitFromTray());
         _trayIcon.Icon = _appIcon;
-        _trayIcon.Text = "TVRock Zoo Ver.1.0.5";
+        _trayIcon.Text = "TVRock Zoo Ver."+Application.ProductVersion.Split('+' )[0];
         _trayIcon.ContextMenuStrip = menu;
         _trayIcon.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowFromTray(); };
         _trayIcon.Visible = true;
@@ -552,7 +552,7 @@ internal sealed partial class MainForm : Form
     {
         if (!_startInTray) return;
         Hide();
-        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.1.0.5", "常駐を開始しました。通知領域のアイコンをクリックすると表示します。", ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver."+Application.ProductVersion.Split('+' )[0], "常駐を開始しました。通知領域のアイコンをクリックすると表示します。", ToolTipIcon.Info);
     }
 
     private void HideToTrayWhenClosing(FormClosingEventArgs e)
@@ -560,7 +560,7 @@ internal sealed partial class MainForm : Form
         if (_exitRequested || e.CloseReason == CloseReason.WindowsShutDown) return;
         e.Cancel = true;
         Hide();
-        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver.1.0.5", "通知領域で常駐しています。右クリックから終了できます。", ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(1500, "TVRock Zoo Ver."+Application.ProductVersion.Split('+' )[0], "通知領域で常駐しています。右クリックから終了できます。", ToolTipIcon.Info);
     }
 
     private void ShowFromTray()
@@ -614,11 +614,3 @@ internal sealed partial class MainForm : Form
         base.Dispose(disposing);
     }
 }
-
-
-
-
-
-
-
-

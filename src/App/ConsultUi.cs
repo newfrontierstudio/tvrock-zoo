@@ -25,6 +25,7 @@ internal sealed partial class MainForm
         var body=new FlowLayoutPanel{Dock=DockStyle.Fill,FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoScroll=true,Padding=new Padding(22,18,22,18),BackColor=Color.White};
         page.Controls.Add(body);
         body.Dock=DockStyle.Top;body.AutoSize=true;
+        ModernScrollBar.Attach(_consultResults);
         Col(_consultResults,"start","開始日時",170);Col(_consultResults,"station","局",85);Col(_consultResults,"title","条件に合った番組",400,true);
         page.Controls.Add(_consultResults);_consultResults.BringToFront();
         _consultResults.CellDoubleClick+=async(_,e)=>{if(e.RowIndex>=0&&_consultResults.Rows[e.RowIndex].Tag is Show show){await NativeBookShow(show);RefreshConsultResults();}};
@@ -49,18 +50,13 @@ internal sealed partial class MainForm
         var options=new ContextMenuStrip();options.Items.Add("最初から相談する",null,(_,_)=>{ask.Visible=true;import.Visible=false;instructions.Text="下のボタンから始めてください。";});options.Items.Add("取り込んだ好みを解除",null,(_,_)=>{clear.Visible=true;clear.PerformClick();clear.Visible=false;RefreshConsultResults();});import.ContextMenuStrip=options;ask.ContextMenuStrip=options;Disposed+=(_,_)=>options.Dispose();
         clear.Click+=(_,_)=>{if(MessageBox.Show(this,"取り込んだ好みを解除し、通常のおすすめ選びに戻しますか？\n予約済みの番組は残ります。","好みの解除",MessageBoxButtons.YesNo)!=DialogResult.Yes)return;try{File.Delete(Path.Combine(RecommendationHome,"consult-preferences.json"));MessageBox.Show(this,"通常のおすすめ選びに戻しました。");}catch(Exception e){MessageBox.Show(this,e.Message,"解除できませんでした");}};
     }
-    void ShowConsultImport()
+    void ShowConsultImport(string? supplied=null)
     {
         using var dialog=new Form{Text="ChatGPTの回答を取り込む",Size=new Size(650,470),StartPosition=FormStartPosition.CenterParent,MinimizeBox=false,MaximizeBox=false};
-        var input=new TextBox{Multiline=true,ScrollBars=ScrollBars.Vertical,Dock=DockStyle.Fill};try{if(Clipboard.ContainsText())input.Text=Clipboard.GetText();}catch{}
+        var input=new TextBox{Multiline=true,ScrollBars=ScrollBars.Vertical,Dock=DockStyle.Fill};if(supplied!=null)input.Text=supplied;else try{if(Clipboard.ContainsText())input.Text=Clipboard.GetText();}catch{}
         var caption=new Label{Text="回答を貼り付けて「内容を確認」。適用しても今すぐ予約は追加しません。",Dock=DockStyle.Top,Height=52,Padding=new Padding(8)};
         var buttons=new FlowLayoutPanel{Dock=DockStyle.Bottom,Height=48,FlowDirection=FlowDirection.RightToLeft};var check=new Button{Text="内容を確認",AutoSize=true};var cancel=new Button{Text="閉じる",AutoSize=true,DialogResult=DialogResult.Cancel};buttons.Controls.AddRange([cancel,check]);dialog.Controls.Add(input);dialog.Controls.Add(caption);dialog.Controls.Add(buttons);StyleControls(check);StyleControls(cancel);
         check.Click+=(_,_)=>{try{var prefs=ConsultPreferences.Parse(input.Text);string preview="好きな内容（おすすめを増やす）\n"+string.Join("、",prefs.Include)+"\n\n避けたい内容（おすすめから除外）\n"+(prefs.Exclude.Length==0?"なし":string.Join("、",prefs.Exclude))+"\n\n前回取り込んだ好みを置き換えます。既存予約・TVRockの検索条件は変更しません。\nこの内容を適用しますか？";if(MessageBox.Show(dialog,preview,"好みの確認",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;prefs.Save(RecommendationHome);RefreshConsultResults();MessageBox.Show(dialog,"条件に合う番組を、この画面の下に表示しました。\n番組をダブルクリックすると予約できます。","適用しました");dialog.Close();}catch(Exception error){MessageBox.Show(dialog,"取り込めませんでした。\n"+error.Message,"回答を確認してください");}};
         dialog.ShowDialog(this);
     }
 }
-
-
-
-
-

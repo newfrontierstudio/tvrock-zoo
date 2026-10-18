@@ -11,17 +11,17 @@ internal sealed partial class MainForm
     {
         var bar=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(4)};
         var prev=new Button{Text="前日",AutoSize=true};var next=new Button{Text="翌日",AutoSize=true};
-        var now=new Button{Text="現在時刻へ",AutoSize=true};now.Click+=(_,_)=>{_scheduleDate.Value=DateTime.Today;_schedule.AutoScrollPosition=new Point(0,(int)DateTime.Now.TimeOfDay.TotalMinutes*3);};
-        bar.Controls.AddRange([prev,_scheduleDate,next,now,_showGuideList]);
+        var now=new Button{Text="現在時刻へ",AutoSize=true};now.Click+=(_,_)=>{ShowCurrentGuideTime();};
+        bar.Controls.AddRange([prev,_scheduleDate,next,now,_showGuideList]);var stationOrder=new Button{Text="局の並び順",AutoSize=true};bar.Controls.Add(stationOrder);stationOrder.Click+=(_,_)=>EditStationOrder();
         var searchbar=guidePage.Controls.OfType<FlowLayoutPanel>().First(p=>p.Controls.Contains(_nativeQuery));var statusbar=guidePage.Controls.OfType<FlowLayoutPanel>().First(p=>p.Controls.Contains(_nativeStatus));
         guidePage.Controls.Clear();var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4};layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         searchbar.Dock=DockStyle.Fill;bar.Dock=DockStyle.Fill;statusbar.Dock=DockStyle.Fill;var surface=new Panel{Dock=DockStyle.Fill};surface.Controls.Add(_nativeGuide);surface.Controls.Add(_schedule);layout.Controls.Add(searchbar,0,0);layout.Controls.Add(bar,0,1);layout.Controls.Add(surface,0,2);layout.Controls.Add(statusbar,0,3);guidePage.Controls.Add(layout);
         prev.Click+=(_,_)=>_scheduleDate.Value=_scheduleDate.Value.AddDays(-1);next.Click+=(_,_)=>_scheduleDate.Value=_scheduleDate.Value.AddDays(1);
         _scheduleDate.ValueChanged+=(_,_)=>RenderSchedule();_showGuideList.CheckedChanged+=(_,_)=>RenderSchedule();
         _schedule.StationInk=StationColor;
-        _schedule.BookShow=async s=>await NativeBookShow(s);
+        _schedule.BookShow=async s=>await NativeBookShow(s);_schedule.StationOrderChanged=order=>{try{Directory.CreateDirectory(RecommendationHome);File.WriteAllLines(Path.Combine(RecommendationHome,"station-order.txt"),order);}catch(Exception error){MessageBox.Show(this,error.Message,"局の並び順を保存できません");}};guidePage.Enter+=(_,_)=>{if(IsHandleCreated)BeginInvoke((Action)ShowCurrentGuideTime);};
         _schedule.SelectShow=s=>_nativeStatus.Text=s.Start.ToLocalTime().ToString("MM/dd HH:mm")+" "+s.Station+" "+s.Title;
-        _schedule.HoverShow=(s,p)=>{if(s==null)HideLargeTip();else QueueLargeTip(_schedule,string.IsNullOrWhiteSpace(s.Description)?"番組説明が未取得です。番組表を更新してください。":s.Description,p);};
+        _schedule.HoverShow=(s,p)=>{if(s==null)HideLargeTip();else QueueLargeTip(_schedule,GuidePopupText(s),p);};
         _nativeReservations.Tag="date-partitions";_nativeGuide.Tag="date-partitions";
         _nativeReservations.RowPostPaint+=PaintDatePartition;_nativeGuide.RowPostPaint+=PaintDatePartition;
         _nativeKeywords.CellPainting+=PaintKeywordStations;
@@ -38,18 +38,20 @@ internal sealed partial class MainForm
         _tabs.SelectedIndexChanged+=(_,_)=>{if(_tabs.SelectedTab==detailPage&&_webBrowser.Source==null)_detailLanding.Visible=true;};
         RenderSchedule();
     }
+    internal static string GuidePopupText(Show show)=>$"{show.Station}  {show.Start:MM/dd HH:mm} ～ {show.End:HH:mm}\\n{show.Title}".Replace("\\n",Environment.NewLine)+(string.IsNullOrWhiteSpace(show.Description)?"":Environment.NewLine+Environment.NewLine+show.Description);
+    void ShowCurrentGuideTime(){_scheduleDate.Value=DateTime.Today;RenderSchedule();_schedule.AutoScrollPosition=new Point(0,Math.Max(0,ScheduleGrid.TimelineY(DateTime.Now.TimeOfDay.TotalMinutes)-45));}
     void RenderSchedule()
     {
         bool list=_showGuideList.Checked||!string.IsNullOrWhiteSpace(_nativeQuery.Text);_nativeGuide.Visible=list;_schedule.Visible=!list;
         if(_schedule.Day!=_scheduleDate.Value.Date)_schedule.AutoScrollPosition=Point.Empty;_schedule.Day=_scheduleDate.Value.Date;
         _schedule.Shows=_nativeShows.Where(s=>_nativeStation.SelectedIndex<=0||s.Station==Convert.ToString(_nativeStation.SelectedItem)).ToList();
-        _schedule.Booked=_nativeShows.Where(s=>_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))).Select(s=>s.Key).ToHashSet();_schedule.RefreshSchedule();
+        _schedule.StationOrder=OrderedStations().ToList();_schedule.Disabled=_nativeShows.Where(s=>_nativeBookings.Any(b=>!b.Enabled&&Planner.SameBroadcast(s,b))).Select(s=>s.Key).ToHashSet();_schedule.Booked=_nativeShows.Where(s=>_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))).Select(s=>s.Key).ToHashSet();_schedule.RefreshSchedule();
     }
     static void ApplyDatePartitions(DataGridView grid)
     {
         if(Convert.ToString(grid.Tag)!="date-partitions")return;int dateColumn=grid.Columns["start"].Index;
         bool enabled=!NativeSort.TryGetValue(grid,out var sort)||sort.Column==dateColumn;DateTime? previous=null;
-        foreach(DataGridViewRow row in grid.Rows){var date=row.Cells[dateColumn].Value is DateTime value?value.Date:(DateTime?)null;bool boundary=enabled&&previous.HasValue&&date!=previous;row.Cells[dateColumn].Tag=boundary?"date-boundary":null;row.DefaultCellStyle.Padding=new Padding(6,2,6,2);row.Height=grid.DefaultCellStyle.Font!.Height+9;previous=date;}
+        foreach(DataGridViewRow row in grid.Rows){var date=row.Cells[dateColumn].Value is DateTime value?value.Date:(DateTime?)null;bool boundary=enabled&&previous.HasValue&&date!=previous;row.Cells[dateColumn].Tag=boundary?"date-boundary":null;row.DefaultCellStyle.Padding=new Padding(6,0,6,0);row.Height=grid.DefaultCellStyle.Font!.Height+5;previous=date;}
     }
     static void PaintDatePartition(object? sender,DataGridViewRowPostPaintEventArgs e)
     {

@@ -91,4 +91,3 @@ internal static partial class TvRockImport
     [GeneratedRegex("^\\d+ ([A-Z]+) (.*)$", RegexOptions.CultureInvariant)]
     private static partial Regex ScheduleFieldPattern();
 }
-
