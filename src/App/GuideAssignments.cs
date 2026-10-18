@@ -2,7 +2,17 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using TsRecommend;
 namespace TsScheduler;
-internal sealed record GuideAssignment(string Driver,bool Planned);
+internal sealed record GuideAssignment(string Driver,bool Planned)
+{
+    internal string BadgeNumber
+    {
+        get
+        {
+            var match=Regex.Match(Driver,@"^BonDriver_PX.*_D(\d+)\.dll$",RegexOptions.IgnoreCase);
+            return match.Success&&int.TryParse(match.Groups[1].Value,out int number)&&number<int.MaxValue?(number+1).ToString():"?";
+        }
+    }
+}
 internal sealed partial class MainForm
 {
     Dictionary<int,string> guideDrivers=[];DateTimeOffset nextDriverRefresh;bool driverRefreshBusy;

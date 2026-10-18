@@ -12,7 +12,7 @@ internal sealed partial class ScheduleGrid
         var text=Rectangle.Inflate(bounds,-inset,-Math.Max(1,(int)Math.Round(3*scale)));if(text.Width<1||text.Height<1)return;
         var ink=Color.FromArgb(23,43,65);string time=show.Start.ToLocalTime().ToString("HH:mm");
         if(!booked){TextRenderer.DrawText(graphics,time+" "+(disabled?"【予約無効】 ":"")+show.Title,font,text,ink,TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);return;}
-        string label="予約済"+(assignment!=null?"｜"+assignment.Driver:"");
+        string label="予約済"+(assignment!=null?"｜"+assignment.BadgeNumber:"");
         var state=graphics.Save();try
         {
             graphics.SetClip(text,System.Drawing.Drawing2D.CombineMode.Intersect);
@@ -33,8 +33,3 @@ internal sealed partial class ScheduleGrid
         }finally{graphics.Restore(state);}
     }
 }
-
-
-
-
-
