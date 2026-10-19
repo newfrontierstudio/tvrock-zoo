@@ -32,6 +32,7 @@ internal sealed partial class MainForm
         var toggle=new CheckBox{Text="診断ログ OFF",AutoSize=true,Checked=DiagnosticLogging.Enabled(RecommendationHome),Margin=new Padding(0,8,0,4)};toggle.Text=toggle.Checked?"診断ログ ON":"診断ログ OFF";body.Controls.Add(toggle);
         body.Controls.Add(new Label{Text="不具合調査用。OFFでもエラーと録画結果は残します。",AutoSize=true,Margin=new Padding(0,0,0,10)});
 
+        InitializeProblemReporting(body.Controls);
         bool reverting=false;toggle.CheckedChanged+=(_,_)=>{if(reverting)return;try{DiagnosticLogging.SetEnabled(RecommendationHome,toggle.Checked);toggle.Text=toggle.Checked?"診断ログ ON":"診断ログ OFF";}catch(Exception e){reverting=true;toggle.Checked=!toggle.Checked;reverting=false;MessageBox.Show(this,e.Message,"ログ設定を保存できません");}};
     }
 }
