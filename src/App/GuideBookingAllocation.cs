@@ -2,6 +2,7 @@ using TsRecommend;
 namespace TsScheduler;
 internal sealed partial class MainForm
 {
+    internal static bool ReservationDeviceAvailable(Show show,List<Tuner> tuners,List<Booking> bookings,int device)=>Planner.FreeDevice(show,tuners.OrderBy(t=>t.Device==device?0:1).ToList(),bookings.Where(b=>b.Enabled).ToList(),[])==device;
     internal static string AllocationStamp(IEnumerable<Booking> bookings)=>System.Text.Json.JsonSerializer.Serialize(bookings.OrderBy(b=>b.Id,StringComparer.Ordinal).Select(b=>new{b.Id,b.Title,b.Station,b.ServiceId,b.EventId,b.Start,b.End,b.Device,b.Enabled,b.Repeating,b.Fields}));
     internal static AllocationTask AllocationBooking(Booking b,List<Tuner> tuners,DateTimeOffset now)
     {

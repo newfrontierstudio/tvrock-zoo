@@ -1,4 +1,4 @@
-# TVRock Zoo Ver.1.0.19
+# TVRock Zoo Ver.1.0.20
 
 TVRockの予約一覧・番組表・自動検索予約を、軽快な専用画面で操作するWindows向け非公式ツールです。録画は既存のTVRockが担当します。
 
@@ -88,3 +88,9 @@ TVRockの変更は一括保存ではありません。途中で通信が途切�
 
 追加の診断ログは通信の成否・所要時間や予約保存などを記録します。番組名・接続先URL・個人のパス・応答本文・例外のメッセージは記録せず、自動送信もしません。ログは1ファイル約1MBを上限に前回分へ切り替えます。
 保存先：接続先ごとの設定フォルダー（通常 `%LOCALAPPDATA%\TVRockZoo`）の `diagnostic.jsonl` と `errors.jsonl`。
+
+## 不具合の連絡先
+
+[newfrontierstudio@gmail.com](mailto:newfrontierstudio@gmail.com) へ、製品名・バージョン・操作と結果をお知らせください。詳細設定の診断ログの近くとHELPにも「不具合を報告」を用意しました。メール作成画面を開く方式で、ログは内容を確認して手動で添付できます。自動送信・自動添付はしません。
+
+接続先の変更は、詳細設定の「TVRockの接続設定」から行います。「初期設定をやり直す」からフォルダーとURLを再入力できます。既存の設定が有効な場合、再インストールでも通常は初回設定を省略します。設定は `%LOCALAPPDATA%\TVRockZoo\connections.json` に保存し、旧 `connection.json` がある場合も読み込みます。TVRockのiniは同じTVRockフォルダーの `dtv.ini` を使います。

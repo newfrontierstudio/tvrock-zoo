@@ -12,6 +12,7 @@ internal sealed partial class MainForm
         var actions=new FlowLayoutPanel{AutoSize=true};var expand=new Button{Text="すべて開く",AutoSize=true};var collapse=new Button{Text="すべて閉じる",AutoSize=true};actions.Controls.AddRange([expand,collapse]);body.Controls.Add(actions);StyleControls(actions);expand.Click+=(_,_)=>{foreach(var item in sections)item.Expanded=true;};collapse.Click+=(_,_)=>{foreach(var item in sections)item.Expanded=false;};
         void TextBlock(string text,bool heading=false){if(heading){if(text=="TVRock Zoo の使い方"){body.Controls.Add(new Label{Text=text,AutoSize=true,Font=new Font(Font,FontStyle.Bold),Margin=new Padding(0,4,0,8)});return;}current=new HelpSection(text,Font);sections.Add(current);body.Controls.Add(current);return;}var label=new SelectableHelpText{Text=text,ForeColor=Ink,Font=Font,Margin=new Padding(4,4,4,10)};(current?.Content.Controls??body.Controls).Add(label);}
         TextBlock(@"TVRock Zoo の使い方",true);
+        AddSupportContact(body.Controls);
         TextBlock(@"TVRockの予約・番組表を専用画面で操作する非公式ツールです。録画はTVRockが担当します。");
         TextBlock(@"予約する・取り消す／録画時間を調整する",true);
         TextBlock(@"○で「録画しない」へ、×で有効な予約に戻します。編集は行をダブルクリック。
