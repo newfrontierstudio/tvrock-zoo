@@ -1,10 +1,10 @@
 using TsRecommend;using TsScheduler;using System.Reflection;using System.Text;
 static class CompatibilityTests{
  static void Check(bool good,string label){if(!good)throw new Exception(label);Console.WriteLine("PASS: "+label);}
- [STAThread]static int Main(){ApplicationConfiguration.Initialize();Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);try{
+ [STAThread]static int Main(string[] args){if(args.Contains("--private-receipt-acceptance"))return ReceiptAcceptance.Run().GetAwaiter().GetResult();ApplicationConfiguration.Initialize();Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);try{
  AllocationTests.Run();Check(new GuideAssignment("BonDriver_PXMLT5PE_D0.dll",false).BadgeNumber=="1"&&new GuideAssignment("BonDriver_PXMLT5PE_D4.dll",false).BadgeNumber=="5","PLEX badge numbers are one-based");
  var iconNow=DateTimeOffset.Now;var iconBooking=new Booking("rec","番組","NHK",1,1,iconNow.AddMinutes(-1),iconNow.AddMinutes(10),5,true,true,false,[]);Check(MainForm.RecordingActivities([iconBooking,iconBooking,iconBooking with{Id="off",Enabled=false},iconBooking with{Id="later",Start=iconNow.AddHours(1),End=iconNow.AddHours(2)}],iconNow).Length==1,"Recording icon excludes disabled/future bookings and duplicate IDs");Check(MainForm.RecordingActivities([iconBooking with{End=iconNow.AddSeconds(-5),Fields=new(){["TALE"]="10"}}],iconNow).Length==1,"Recording icon includes the adjusted recording tail");
- var root=Path.Combine(Path.GetTempPath(),"zoo108-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);DiagnosticLoggingTests.Run(Path.Combine(root,"diagnostic-tests")).GetAwaiter().GetResult();ProblemReportTests.Run(Path.Combine(root,"report-tests")).GetAwaiter().GetResult();AllocationMutationTests.Run(Path.Combine(root,"mutation-tests")).GetAwaiter().GetResult();
+ var root=Path.Combine(Path.GetTempPath(),"zoo108-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);KeywordFilenameTests.Run(Path.Combine(root,"filename-tests"));DiagnosticLoggingTests.Run(Path.Combine(root,"diagnostic-tests")).GetAwaiter().GetResult();ProblemReportTests.Run(Path.Combine(root,"report-tests")).GetAwaiter().GetResult();AllocationMutationTests.Run(Path.Combine(root,"mutation-tests")).GetAwaiter().GetResult();
  using(var owner=new Form())using(var chooserTimer=new System.Windows.Forms.Timer{Interval=150}){
  bool clicked=false;chooserTimer.Tick+=(_,_)=>{var dialog=Application.OpenForms.Cast<Form>().FirstOrDefault(f=>f.Text=="予約先を選択");if(dialog==null)return;chooserTimer.Stop();using var image=new Bitmap(dialog.Width,dialog.Height);dialog.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(root,"allocation-preview.png"));var button=Desc(dialog).OfType<Button>().Single(b=>b.Text=="このチューナーで予約");clicked=true;button.PerformClick();};
  chooserTimer.Start();var nowChoice=new DateTimeOffset(2030,1,1,10,0,0,TimeSpan.FromHours(9));var picked=TunerAllocation.Choose(owner,new("new","テスト番組",nowChoice,nowChoice.AddMinutes(30),-1,[1,2],true),[new("old","既存番組",nowChoice,nowChoice.AddMinutes(30),1,[1,2],true)],d=>"チューナー "+d);Check(clicked&&picked?.Device==2&&picked.Changes.Length==0,"Actual chooser lists and confirms a free tuner without relocating bookings");
@@ -45,6 +45,7 @@ static class CompatibilityTests{
  if(Directory.Exists(Path.Combine(root,"diagnostic-tests")))Directory.Delete(Path.Combine(root,"diagnostic-tests"),true);
  if(Directory.Exists(Path.Combine(root,"setup-tests")))Directory.Delete(Path.Combine(root,"setup-tests"),true);
  if(Directory.Exists(Path.Combine(root,"report-tests")))Directory.Delete(Path.Combine(root,"report-tests"),true);
+ if(Directory.Exists(Path.Combine(root,"filename-tests")))Directory.Delete(Path.Combine(root,"filename-tests"),true);
  foreach(var file in Directory.GetFiles(root))File.Delete(file);Directory.Delete(root);Console.WriteLine("PASS: no live reservation writes; remote server transport remains untested");return 0;
  }catch(Exception e){Console.WriteLine(e);return 1;}}
  static IEnumerable<Control> Desc(Control root){foreach(Control child in root.Controls){yield return child;foreach(var sub in Desc(child))yield return sub;}}

@@ -13,17 +13,18 @@ internal static class ProblemReportTests
         var report=ProblemReports.Create(root,"TVRock Zoo","1.0.21","manual description",true,now);if(report.Events.Count!=1||ProblemReports.Json(report).Contains("private"))throw new Exception("The report must reconstruct only allowed diagnostic fields and never include raw files");
         var without=ProblemReports.Create(root,"ZOOstudio Pre","0.13.4","manual description",false,now);if(without.LogIncluded||without.Events.Count!=0)throw new Exception("Unchecking logs must remove all attached events");
         File.WriteAllLines(Path.Combine(root,"errors.jsonl"),Enumerable.Range(0,600).Select(i=>Line(now.AddSeconds(-i),"tvrock.day")));if(ProblemReports.Collect(root,now).Count!=500)throw new Exception("Reports must be bounded to the most recent 500 events");
-        var handler=new Fake();using(var client=ProblemReportSender.Client(handler)){if(!await ProblemReportSender.Ready(client))throw new Exception("Ready endpoint");string receipt=await ProblemReportSender.Send(client,without);if(!Guid.TryParse(receipt,out _)||handler.Posts!=1)throw new Exception("One confirmed report send");}
+        var handler=new Fake();using(var client=ProblemReportSender.Client(handler)){if(!await ProblemReportSender.Ready(client))throw new Exception("Ready endpoint");string receipt=await ProblemReportSender.Send(client,without);if(!Guid.TryParse(receipt,out _)||handler.Posts!=1)throw new Exception("One confirmed report send");File.WriteAllText(Path.Combine(Environment.CurrentDirectory,"work","report-wire-fixture.json"),handler.LastBody);}
+        var rejected=new Fake{Reject=true};using(var client=ProblemReportSender.Client(rejected)){bool caught=false;try{await ProblemReportSender.Send(client,report);}catch(ProblemReportRejectedException){caught=true;}if(!caught||rejected.Posts!=1)throw new Exception("An explicit rejection must be distinguished from uncertain delivery without retrying");}
         var failure=new Fake{Fail=true};using(var client=ProblemReportSender.Client(failure)){try{await ProblemReportSender.Send(client,report);throw new Exception("Unconfirmed send must fail");}catch(HttpRequestException){}if(failure.Posts!=1)throw new Exception("Report transmission must never auto-retry");}
     }
     sealed class Fake:HttpMessageHandler
     {
-        internal int Posts;internal bool Fail;
+        internal int Posts;internal bool Fail;internal bool Reject;internal string LastBody="";
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken cancel)
         {
             if(request.RequestUri!.GetLeftPart(UriPartial.Authority)!=ProblemReportSender.FormUrl.TrimEnd('/'))throw new Exception("Unexpected report destination");
             if(request.Method==HttpMethod.Get)return new(HttpStatusCode.OK){Content=new StringContent(request.RequestUri.AbsolutePath.EndsWith("status")?"{\"Ready\":true}":"{\"Token\":\"1234567890.test-token\"}",System.Text.Encoding.UTF8,"application/json")};
-            Posts++;string body=await request.Content!.ReadAsStringAsync(cancel);if(body.Contains("private"))throw new Exception("Private diagnostic fields leaked into upload");if(Fail)throw new HttpRequestException("synthetic failure");
+            Posts++;string body=await request.Content!.ReadAsStringAsync(cancel);LastBody=body;using(var payload=JsonDocument.Parse(body)){if(!payload.RootElement.TryGetProperty("Product",out _))throw new Exception("Report wire format must use the explicit API field names");}if(Reject)return new(HttpStatusCode.BadRequest){Content=new StringContent("{\"Error\":\"synthetic validation failure\",\"DeliveryState\":\"not_sent\"}")};if(body.Contains("private"))throw new Exception("Private diagnostic fields leaked into upload");if(Fail)throw new HttpRequestException("synthetic failure");
             return new(HttpStatusCode.Accepted){Content=new StringContent(JsonSerializer.Serialize(new{Accepted=true,Receipt=Guid.NewGuid().ToString()}),System.Text.Encoding.UTF8,"application/json")};
         }
     }
