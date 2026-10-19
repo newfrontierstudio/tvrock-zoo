@@ -7,9 +7,11 @@ internal sealed partial class MainForm
 
     readonly CheckBox _showGuideList = new(){Text="一覧表示",AutoSize=true};
     readonly Panel _detailLanding=new(){Dock=DockStyle.Fill,BackColor=Color.White};
-    void ShowGuideContext(Show show,Control owner,Point location){HideLargeTip();var menu=new ContextMenuStrip();bool booked=_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(show,b));var action=menu.Items.Add(booked?"予約済み":"予約");action.Enabled=!booked&&show.End>DateTimeOffset.Now;action.Click+=async(_,_)=>await NativeBookShow(show);menu.Closed+=(_,_)=>menu.Dispose();menu.Show(owner,location);}
+    readonly ContextMenuStrip _guideContextMenu=new();
+    void ShowGuideContext(Show show,Control owner,Point location){HideLargeTip();var menu=_guideContextMenu;menu.Items.Clear();bool booked=_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(show,b));var action=menu.Items.Add(booked?"予約済み":"予約");action.Enabled=!booked&&show.End>DateTimeOffset.Now;action.Click+=async(_,_)=>await NativeBookShow(show);menu.Show(owner,location);}
     void InitializeScheduleViews(TabPage guidePage)
     {
+        guidePage.Disposed+=(_,_)=>_guideContextMenu.Dispose();
         var bar=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(4)};
         var prev=new Button{Text="前日",AutoSize=true};var next=new Button{Text="翌日",AutoSize=true};
         var now=new Button{Text="現在時刻へ",AutoSize=true};now.Click+=(_,_)=>{ShowCurrentGuideTime();};
