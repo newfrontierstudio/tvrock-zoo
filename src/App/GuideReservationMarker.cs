@@ -8,12 +8,13 @@ internal sealed partial class ScheduleGrid
     internal static void DrawProgrammeContents(Graphics graphics,Show show,Rectangle bounds,Font font,bool booked,bool disabled,GuideAssignment? assignment=null,bool recording=false)
     {
         float scale=graphics.DpiX/96f;int inset=Math.Max(3,(int)Math.Round(5*scale));
-        if(booked){using var stripe=new SolidBrush(ReservationInk);graphics.FillRectangle(stripe,bounds.Left+1,bounds.Top+1,Math.Min(Math.Max(1,(int)Math.Round(scale)),Math.Max(1,bounds.Width-2)),Math.Max(0,bounds.Height-2));}
+        bool ended=booked&&!recording&&show.End<=DateTimeOffset.Now;
+        if(booked&&!ended){using var stripe=new SolidBrush(ReservationInk);graphics.FillRectangle(stripe,bounds.Left+1,bounds.Top+1,Math.Min(Math.Max(1,(int)Math.Round(scale)),Math.Max(1,bounds.Width-2)),Math.Max(0,bounds.Height-2));}
         if(bounds.Height<font.Height)return;
         var text=Rectangle.Inflate(bounds,-inset,-Math.Max(1,(int)Math.Round(3*scale)));if(text.Width<1||text.Height<1)return;
         var ink=Color.FromArgb(23,43,65);string time=show.Start.ToLocalTime().ToString("HH:mm");
         if(!booked){TextRenderer.DrawText(graphics,time+" "+(disabled?"【予約無効】 ":"")+show.Title,font,text,ink,TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);return;}
-        string label=ReservationBadgeLabel(recording,assignment);
+        string label=ended?"終了":ReservationBadgeLabel(recording,assignment);
         var state=graphics.Save();try
         {
             graphics.SetClip(text,System.Drawing.Drawing2D.CombineMode.Intersect);
