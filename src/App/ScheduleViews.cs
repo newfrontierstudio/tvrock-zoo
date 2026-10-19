@@ -7,6 +7,7 @@ internal sealed partial class MainForm
 
     readonly CheckBox _showGuideList = new(){Text="一覧表示",AutoSize=true};
     readonly Panel _detailLanding=new(){Dock=DockStyle.Fill,BackColor=Color.White};
+    void ShowGuideContext(Show show,Control owner,Point location){HideLargeTip();var menu=new ContextMenuStrip();bool booked=_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(show,b));var action=menu.Items.Add(booked?"予約済み":"予約");action.Enabled=!booked&&show.End>DateTimeOffset.Now;action.Click+=async(_,_)=>await NativeBookShow(show);menu.Closed+=(_,_)=>menu.Dispose();menu.Show(owner,location);}
     void InitializeScheduleViews(TabPage guidePage)
     {
         var bar=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(4)};
@@ -20,6 +21,7 @@ internal sealed partial class MainForm
         _scheduleDate.ValueChanged+=(_,_)=>RenderSchedule();_showGuideList.CheckedChanged+=(_,_)=>RenderSchedule();
         _schedule.StationInk=StationColor;
         _schedule.BookShow=async s=>await NativeBookShow(s);_schedule.StationOrderChanged=order=>{try{Directory.CreateDirectory(RecommendationHome);File.WriteAllLines(Path.Combine(RecommendationHome,"station-order.txt"),order);}catch(Exception error){MessageBox.Show(this,error.Message,"局の並び順を保存できません");}};guidePage.Enter+=(_,_)=>{if(IsHandleCreated)BeginInvoke((Action)ShowCurrentGuideTime);};
+        _schedule.ContextShow=(s,p)=>ShowGuideContext(s,_schedule,p);_nativeGuide.CellMouseClick+=(_,e)=>{if(e.Button==MouseButtons.Right&&e.RowIndex>=0&&_nativeGuide.Rows[e.RowIndex].Tag is Show s)ShowGuideContext(s,_nativeGuide,_nativeGuide.PointToClient(Cursor.Position));};
         _schedule.SelectShow=s=>_nativeStatus.Text=s.Start.ToLocalTime().ToString("MM/dd HH:mm")+" "+s.Station+" "+s.Title;
         InitializeGuideAssignments();_schedule.HoverShow=(s,p)=>{if(s==null)HideLargeTip();else QueueLargeTip(_schedule,GuidePopupText(s)+AssignmentHover(s),p);};
         _nativeReservations.Tag="date-partitions";_nativeGuide.Tag="date-partitions";

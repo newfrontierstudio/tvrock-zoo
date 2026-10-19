@@ -7,6 +7,7 @@ namespace TsScheduler;
 
 internal sealed partial class MainForm : Form
 {
+    protected override bool ProcessCmdKey(ref Message message,Keys keyData){if(keyData==Keys.F5){LoadNativeData();return true;}return base.ProcessCmdKey(ref message,keyData);}
     private readonly DataGridView _tuners = CreateGrid();
     private readonly DataGridView _reservations = CreateGrid();
     private readonly DataGridView _reservationList = CreateGrid();

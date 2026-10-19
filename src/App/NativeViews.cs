@@ -180,7 +180,7 @@ internal sealed partial class MainForm
         if(_nativeGuide.Columns.Count==0)return;
         try{
             var matches=_nativeShows.Where(s=>(_includePast.Checked||s.End>DateTimeOffset.Now)&&(_nativeStation.SelectedIndex<=0||s.Station==Convert.ToString(_nativeStation.SelectedItem))&&MatchesQuery(s,_nativeQuery.Text)).OrderBy(s=>s.Start).ToList();
-            _nativeGuide.Rows.Clear();foreach(var s in matches){bool booked=_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b));int i=_nativeGuide.Rows.Add(s.Start.LocalDateTime,s.End.ToLocalTime().ToString("HH:mm"),s.Station,booked?"予約済":"",s.Title);var row=_nativeGuide.Rows[i];row.Tag=s;row.Cells[0].Style.Format="MM/dd(ddd) HH:mm";row.Cells[4].ToolTipText=s.Description;row.Cells[2].Style.ForeColor=StationColor(s.Station);}
+            _nativeGuide.Rows.Clear();foreach(var s in matches){bool booked=_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b));int i=_nativeGuide.Rows.Add(s.Start.LocalDateTime,s.End.ToLocalTime().ToString("HH:mm"),s.Station,booked?(_nativeBookings.Any(b=>IsRecordingWindow(b,DateTimeOffset.Now)&&Planner.SameBroadcast(s,b))?"録画中":"予約済"):"",s.Title);var row=_nativeGuide.Rows[i];row.Tag=s;row.Cells[0].Style.Format="MM/dd(ddd) HH:mm";row.Cells[4].ToolTipText=s.Description;row.Cells[2].Style.ForeColor=StationColor(s.Station);}
             ApplyDatePartitions(_nativeGuide);RenderSchedule();
             _nativeStatus.Text=$"{matches.Count}件 / 保存済み番組表 {_nativeShows.Count}件・取得 {_nativeGuideStamp}　"+Data.ServiceWarnings(Path.Combine(RockFolder,"dtv.ini"));
         }catch(ArgumentException){_nativeStatus.Text="検索式が正しくありません。括弧などを確認してください。";}catch(RegexMatchTimeoutException){_nativeStatus.Text="検索式が複雑すぎます。短い式で検索してください。";}
