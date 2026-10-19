@@ -188,7 +188,7 @@ internal sealed partial class MainForm
     internal static async Task<string> NativeGet(string relative)
     {
         var uri=new Uri(ConnectionProfiles.Current.Active.BaseUri,relative);if(!ConnectionProfiles.Current.Active.Allows(uri))throw new InvalidOperationException("接続先がTVRockではありません。");
-        return await TvRockHttp.Get(uri);
+        return await DiagnosticLogging.Request(RecommendationHome,relative,()=>TvRockHttp.Get(uri));
     }
     async Task RefreshNativeGuide()
     {

@@ -1,7 +1,7 @@
 [Setup]
 AppId={{632AF8C7-589A-433F-93CF-5AF286F6DFE6}
 AppName=TVRock Zoo
-AppVersion=1.0.18
+AppVersion=1.0.19
 AppPublisher=newfrontierstudio
 AppPublisherURL=https://github.com/newfrontierstudio/tvrock-zoo
 DefaultDirName={localappdata}\Programs\TVRockZoo
@@ -11,8 +11,10 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 OutputDir=..\artifacts
-OutputBaseFilename=TVRockZoo-1.0.18-Setup-x64
+OutputBaseFilename=TVRockZoo-1.0.19-Setup-x64
 SetupIconFile=..\src\App\app.ico
+Uninstallable=yes
+CreateUninstallRegKey=yes
 UninstallDisplayIcon={app}\TVRockZoo.exe
 Compression=lzma2
 SolidCompression=yes
@@ -33,6 +35,10 @@ Source: "..\artifacts\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubd
 Name: "{group}\TVRock Zoo"; Filename: "{app}\TVRockZoo.exe"
 Name: "{autodesktop}\TVRock Zoo"; Filename: "{app}\TVRockZoo.exe"; Tasks: desktopicon
 
+Name: "{group}\TVRock Zoo をアンインストール"; Filename: "{uninstallexe}"
+
+[Messages]
+ConfirmUninstall=%1 のアプリ本体とショートカットを削除します。よろしいですか？%n%n録画中の場合は終了を待ち、アプリを完全終了してください。%n録画ファイル・予約・設定、TVRock・TVTestは削除しません。%n
 [Run]
 Filename: "{app}\TVRockZoo.exe"; Description: "TVRock Zooを起動（初回は接続設定）"; Flags: nowait postinstall skipifsilent
 

@@ -28,6 +28,7 @@ internal sealed partial class MainForm
         _detailLanding.AutoScroll=true;var body=_detailLanding.Controls.OfType<FlowLayoutPanel>().First();body.AutoSize=true;body.WrapContents=false;
         var zebra=new CheckBox{Text="予約一覧のゼブラ背景",AutoSize=false,Width=300,Height=36,TextAlign=ContentAlignment.MiddleLeft,CheckAlign=ContentAlignment.MiddleLeft,Padding=Padding.Empty,Margin=new Padding(0,10,0,10),Checked=DisplayOptions.Current.Zebra};body.Controls.Add(zebra);
         zebra.CheckedChanged+=(_,_)=>{try{DisplayOptions.Current.Zebra=zebra.Checked;DisplayOptions.Current.Save();ApplyDisplayOptions();}catch(Exception e){MessageBox.Show(this,e.Message,"表示設定を保存できません");}};
+        InitializeDiagnosticLogging(body);
         InitializeStationColorEditor(body);
         ApplyDisplayOptions();
     }
