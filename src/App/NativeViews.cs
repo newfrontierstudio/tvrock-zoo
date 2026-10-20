@@ -59,7 +59,7 @@ internal sealed partial class MainForm
         var search=new Button{Text="検索",AutoSize=true};search.Click+=(_,_)=>RenderNativeGuide();
         var update=new Button{Text="番組表を取得",AutoSize=true};update.Click+=async(_,_)=>await RefreshNativeGuide();
         var book=new Button{Text="選択番組を予約",AutoSize=true};book.Click+=async(_,_)=>{book.Enabled=false;try{await NativeBookShow();}finally{book.Enabled=true;}};
-        searchbar.Controls.AddRange([_nativeQuery,_nativeStation,search,_includePast,update,book]);
+        searchbar.Controls.AddRange([_nativeQuery,_nativeStation,search,_includePast,update,book]);InitializeGuideExclusions(searchbar);
         _nativeQuery.KeyDown+=(_,e)=>{if(e.KeyCode==Keys.Enter){e.SuppressKeyPress=true;RenderNativeGuide();}};
         _nativeStation.SelectedIndexChanged+=(_,_)=>RenderNativeGuide();_includePast.CheckedChanged+=(_,_)=>RenderNativeGuide();
         var statusbar=new FlowLayoutPanel{Dock=DockStyle.Bottom,AutoSize=true};statusbar.Controls.Add(_nativeStatus);
@@ -179,11 +179,13 @@ internal sealed partial class MainForm
     {
         if(_nativeGuide.Columns.Count==0)return;
         try{
-            var matches=_nativeShows.Where(s=>(_includePast.Checked||s.End>DateTimeOffset.Now)&&(_nativeStation.SelectedIndex<=0||s.Station==Convert.ToString(_nativeStation.SelectedItem))&&MatchesQuery(s,_nativeQuery.Text)).OrderBy(s=>s.Start).ToList();
+            _nativeStatus.Text="検索中…";_nativeStatus.Refresh();
+            var candidates=_nativeShows.Where(s=>(_includePast.Checked||s.End>DateTimeOffset.Now)&&(_nativeStation.SelectedIndex<=0||s.Station==Convert.ToString(_nativeStation.SelectedItem))&&MatchesQuery(s,_nativeQuery.Text)).OrderBy(s=>s.Start).ToList();
+            var matches=candidates.Where(s=>!IsGuideExcluded(s,_guideNgWords.Text)).ToList();
             _nativeGuide.Rows.Clear();foreach(var s in matches){bool booked=_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b));int i=_nativeGuide.Rows.Add(s.Start.LocalDateTime,s.End.ToLocalTime().ToString("HH:mm"),s.Station,booked?(_nativeBookings.Any(b=>IsRecordingWindow(b,DateTimeOffset.Now)&&Planner.SameBroadcast(s,b))?"録画中":"予約済"):"",s.Title);var row=_nativeGuide.Rows[i];row.Tag=s;row.Cells[0].Style.Format="MM/dd(ddd) HH:mm";row.Cells[4].ToolTipText=s.Description;row.Cells[2].Style.ForeColor=StationColor(s.Station);}
             ApplyDatePartitions(_nativeGuide);RenderSchedule();
-            _nativeStatus.Text=$"{matches.Count}件 / 保存済み番組表 {_nativeShows.Count}件・取得 {_nativeGuideStamp}　"+Data.ServiceWarnings(Path.Combine(RockFolder,"dtv.ini"));
-        }catch(ArgumentException){_nativeStatus.Text="検索式が正しくありません。括弧などを確認してください。";}catch(RegexMatchTimeoutException){_nativeStatus.Text="検索式が複雑すぎます。短い式で検索してください。";}
+            _nativeStatus.Text=GuideSearchSummary(matches.Count,candidates.Count-matches.Count);
+        }catch(ArgumentException){_nativeStatus.Text="検索エラー：検索式が正しくありません。括弧などを確認してください。";}catch(RegexMatchTimeoutException){_nativeStatus.Text="検索エラー：検索式が複雑すぎます。短い式で検索してください。";}
     }
     internal static async Task<string> NativeGet(string relative)
     {

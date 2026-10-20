@@ -11,6 +11,7 @@ internal sealed partial class MainForm
     void ShowGuideContext(Show show,Control owner,Point location){HideLargeTip();var menu=_guideContextMenu;menu.Items.Clear();bool booked=_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(show,b));var action=menu.Items.Add(booked?"予約済み":"予約");action.Enabled=!booked&&show.End>DateTimeOffset.Now;action.Click+=async(_,_)=>await NativeBookShow(show);menu.Show(owner,location);}
     void InitializeScheduleViews(TabPage guidePage)
     {
+        InitializeBackGesture();
         guidePage.Disposed+=(_,_)=>_guideContextMenu.Dispose();
         var bar=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(4)};
         var prev=new Button{Text="前日",AutoSize=true};var next=new Button{Text="翌日",AutoSize=true};
@@ -47,7 +48,7 @@ internal sealed partial class MainForm
     void ShowCurrentGuideTime(){_scheduleDate.Value=DateTime.Today;RenderSchedule();_schedule.AutoScrollPosition=new Point(0,Math.Max(0,ScheduleGrid.TimelineY(DateTime.Now.TimeOfDay.TotalMinutes)-45));}
     void RenderSchedule()
     {
-        bool list=_showGuideList.Checked||!string.IsNullOrWhiteSpace(_nativeQuery.Text);_nativeGuide.Visible=list;_schedule.Visible=!list;
+        bool list=_showGuideList.Checked||!string.IsNullOrWhiteSpace(_nativeQuery.Text)||!string.IsNullOrWhiteSpace(_guideNgWords.Text);_nativeGuide.Visible=list;_schedule.Visible=!list;
         if(_schedule.Day!=_scheduleDate.Value.Date)_schedule.AutoScrollPosition=Point.Empty;_schedule.Day=_scheduleDate.Value.Date;
         _schedule.Shows=_nativeShows.Where(s=>_nativeStation.SelectedIndex<=0||s.Station==Convert.ToString(_nativeStation.SelectedItem)).ToList();
         UpdateGuideAssignments();_schedule.StationOrder=OrderedStations().ToList();_schedule.Disabled=_nativeShows.Where(s=>_nativeBookings.Any(b=>!b.Enabled&&Planner.SameBroadcast(s,b))).Select(s=>s.Key).ToHashSet();_schedule.Booked=_nativeShows.Where(s=>_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))).Select(s=>s.Key).ToHashSet();_schedule.RefreshSchedule();
