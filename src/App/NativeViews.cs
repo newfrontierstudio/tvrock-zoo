@@ -45,7 +45,7 @@ internal sealed partial class MainForm
         _tabs.TabPages.RemoveAt(2);_tabs.TabPages.RemoveAt(1);_tabs.TabPages[0].Text="詳細設定";
         var listPage=new TabPage("予約一覧");var guidePage=new TabPage("番組表・検索");var keysPage=new TabPage("自動検索予約");
         _tabs.TabPages.Insert(0,listPage);_tabs.TabPages.Insert(1,guidePage);_tabs.TabPages.Insert(2,keysPage);_tabs.SelectedIndex=0;
-        var refresh=new Button { Text="一覧を更新",AutoSize=true };refresh.Click+=(_,_)=>LoadNativeData();toolbar.Controls.Add(refresh);
+        _latestInformation.Click+=(_,_)=>RefreshStudio();toolbar.Controls.Add(_latestInformation);toolbar.Controls.Add(_latestInformationState);
         var listbar=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(4)};
         var edit=new Button{Text="選択した予約を編集",AutoSize=true}; edit.Click+=async(_,_)=>await NativeEditBooking();
         listbar.Controls.AddRange([edit,_includeDisabled,_includeFinishedBookings]); _includeDisabled.CheckedChanged+=(_,_)=>LoadNativeReservations();_includeFinishedBookings.CheckedChanged+=(_,_)=>LoadNativeReservations();

@@ -15,7 +15,7 @@ internal sealed class RecordingIndicator:IDisposable
         this.owner=owner;this.tray=tray;this.idle=idle;this.app=app;messages=new TaskbarMessages(()=>ApplyTaskbar());
         owner.HandleCreated+=(_,_)=>{messages.Attach(owner.Handle);};owner.HandleDestroyed+=(_,_)=>messages.Detach();
         if(owner.IsHandleCreated)messages.Attach(owner.Handle);owner.Shown+=(_,_)=>ApplyTaskbar();
-        tray.MouseMove+=TrayMove;tray.MouseDown+=TrayDown;hoverTimer.Tick+=HoverTick;hoverTimer.Start();
+        tray.Text="";
     }
     internal static string BadgeText(int count)=>count>=100?"99+":Math.Max(0,count).ToString(System.Globalization.CultureInfo.InvariantCulture);
     internal static Icon CreateCountIcon(int count)
@@ -32,7 +32,7 @@ internal sealed class RecordingIndicator:IDisposable
     {
         if(disposed)return;var rows=recordings.OrderBy(r=>r.End).ThenBy(r=>r.Station).ToArray();string next=Describe(app,rows,note);if(next==signature)return;signature=fullText=next;Count=rows.Length;
         Icon icon=idle;if(Count>0){int key=Math.Min(Count,100);if(!icons.TryGetValue(key,out icon!))icons[key]=icon=CreateCountIcon(key);}
-        owner.Icon=icon;tray.Icon=icon;string summary=Count==0?app+" — 録画なし":$"{app} — {Count}局録画中";tray.Text=summary.Length>63?summary[..63]:summary;
+        owner.Icon=icon;tray.Icon=icon;string summary=Count==0?app+" — 録画なし":$"{app} — {Count}局録画中";tray.Text="";
         if(hover.Visible)ShowHover();ApplyTaskbar();
     }
     void ApplyTaskbar()

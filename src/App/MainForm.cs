@@ -7,7 +7,7 @@ namespace TsScheduler;
 
 internal sealed partial class MainForm : Form
 {
-    protected override bool ProcessCmdKey(ref Message message,Keys keyData){if(keyData==Keys.F5){LoadNativeData();return true;}return base.ProcessCmdKey(ref message,keyData);}
+    protected override bool ProcessCmdKey(ref Message message,Keys keyData){if(keyData==Keys.F5){RefreshStudio();return true;}return base.ProcessCmdKey(ref message,keyData);}
     private readonly DataGridView _tuners = CreateGrid();
     private readonly DataGridView _reservations = CreateGrid();
     private readonly DataGridView _reservationList = CreateGrid();
@@ -97,6 +97,7 @@ internal sealed partial class MainForm : Form
     private static string RecommendationHome => ConnectionProfiles.Current.Active.Home;
     private void InitializeRecommendations()
     {
+        RecommendationSwitch.Save(RecommendationHome,true);
         var menu = new ContextMenuStrip();
         var enabled = new ToolStripMenuItem("3日ごとの自動おすすめ予約") { CheckOnClick = true, Checked = !File.Exists(Path.Combine(RecommendationHome, "recommend-disabled.txt")) };
         _recommendToggle.Checked = enabled.Checked;
