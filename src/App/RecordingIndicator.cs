@@ -2,7 +2,10 @@ using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 namespace ZooRecording;
 
-internal sealed record RecordingActivity(string Station,string Title,DateTimeOffset End);
+internal sealed record RecordingActivity(string Station,string Title,DateTimeOffset End)
+{
+    internal string Tuner{get;init;}="";
+}
 internal sealed class RecordingIndicator:IDisposable
 {
     readonly Form owner;readonly NotifyIcon tray;readonly Icon idle;readonly string app;
@@ -15,24 +18,31 @@ internal sealed class RecordingIndicator:IDisposable
         this.owner=owner;this.tray=tray;this.idle=idle;this.app=app;messages=new TaskbarMessages(()=>ApplyTaskbar());
         owner.HandleCreated+=(_,_)=>{messages.Attach(owner.Handle);};owner.HandleDestroyed+=(_,_)=>messages.Detach();
         if(owner.IsHandleCreated)messages.Attach(owner.Handle);owner.Shown+=(_,_)=>ApplyTaskbar();
-        tray.Text="";
+        tray.Text=app+" — 録画なし";
     }
     internal static string BadgeText(int count)=>count>=100?"99+":Math.Max(0,count).ToString(System.Globalization.CultureInfo.InvariantCulture);
-    internal static Icon CreateCountIcon(int count)
+    internal static Icon CreateCountIcon(int count,bool studio=false)
     {
         using var bitmap=new Bitmap(64,64);using var g=Graphics.FromImage(bitmap);g.Clear(Color.Transparent);g.SmoothingMode=SmoothingMode.AntiAlias;g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
         using var path=new GraphicsPath();path.AddArc(2,2,16,16,180,90);path.AddArc(46,2,16,16,270,90);path.AddArc(46,46,16,16,0,90);path.AddArc(2,46,16,16,90,90);path.CloseFigure();
-        using var red=new SolidBrush(Color.FromArgb(204,35,51));g.FillPath(red,path);
-        string text=BadgeText(count);using var font=new Font("Segoe UI",text.Length==1?49:text.Length==2?39:28,FontStyle.Bold,GraphicsUnit.Pixel);using var format=new StringFormat{Alignment=StringAlignment.Center,LineAlignment=StringAlignment.Center};g.DrawString(text,font,Brushes.White,new RectangleF(0,-2,64,64),format);
+        using var red=new SolidBrush(studio?Color.FromArgb(239,197,203):Color.FromArgb(204,35,51));g.FillPath(red,path);
+        string text=BadgeText(count);using var font=new Font("Segoe UI",text.Length==1?49:text.Length==2?39:28,FontStyle.Bold,GraphicsUnit.Pixel);using var format=new StringFormat{Alignment=StringAlignment.Center,LineAlignment=StringAlignment.Center};using var number=new SolidBrush(studio?Color.FromArgb(139,70,80):Color.White);g.DrawString(text,font,number,new RectangleF(0,-2,64,64),format);
         IntPtr handle=bitmap.GetHicon();try{return (Icon)Icon.FromHandle(handle).Clone();}finally{DestroyIcon(handle);}
     }
-    internal static string Describe(string app,IReadOnlyList<RecordingActivity> rows,string note="")=>rows.Count==0?app+" — 録画なし"+note:$"{app} — {rows.Count}局録画中{note}\n"+string.Join("\n",rows.Select(r=>$"{Clean(r.Station)}：{Clean(r.Title)}（{r.End.ToLocalTime():HH:mm}まで）"));
+    internal static string Describe(string app,IReadOnlyList<RecordingActivity> rows,string note="")=>rows.Count==0?app+" — 録画なし"+note:$"{app} — {rows.Count}局録画中{note}\n"+string.Join("\n",rows.Select(r=>$"{(r.Tuner.Length>0?Clean(r.Tuner)+"／":"")}{Clean(r.Station)}：{Clean(r.Title)}（{r.End.ToLocalTime():HH:mm}まで）"));
+    internal static string NativeTip(string app,IReadOnlyList<RecordingActivity> rows)
+    {
+        string text=rows.Count==0?app+" — 録画なし":string.Join("\n",rows.Select(r=>$"{Clean(r.Station)}：{Clean(r.Title)}"));
+        if(text.Length<=63)return text;
+        int length=62;if(char.IsHighSurrogate(text[length-1]))length--;
+        return text[..length]+"…";
+    }
     static string Clean(string text)=>text.Replace('\r',' ').Replace('\n',' ').Replace('\0',' ').Trim();
     internal void Update(IEnumerable<RecordingActivity> recordings,string note="")
     {
         if(disposed)return;var rows=recordings.OrderBy(r=>r.End).ThenBy(r=>r.Station).ToArray();string next=Describe(app,rows,note);if(next==signature)return;signature=fullText=next;Count=rows.Length;
-        Icon icon=idle;if(Count>0){int key=Math.Min(Count,100);if(!icons.TryGetValue(key,out icon!))icons[key]=icon=CreateCountIcon(key);}
-        owner.Icon=icon;tray.Icon=icon;string summary=Count==0?app+" — 録画なし":$"{app} — {Count}局録画中";tray.Text="";
+        Icon icon=idle;if(Count>0){int key=Math.Min(Count,100);if(!icons.TryGetValue(key,out icon!))icons[key]=icon=CreateCountIcon(key,app=="ZOOstudio Pre");}
+        owner.Icon=icon;tray.Icon=icon;tray.Text=NativeTip(app,rows);
         if(hover.Visible)ShowHover();ApplyTaskbar();
     }
     void ApplyTaskbar()

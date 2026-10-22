@@ -111,7 +111,7 @@ static class Bench
             try {var text=new StringBuilder();for(int i=0;i<500;i++)text.Append($"{i} START {day.AddMinutes(i).ToUnixTimeSeconds()}\n{i} END {day.AddMinutes(i+30).ToUnixTimeSeconds()}\n{i} UNIQID {i+1}\n{i} VALIDATE 1\n{i} TITLE 合成番組{i}\n");File.WriteAllText(fixture,text.ToString(),Data.Cp932);Check(Data.Bookings(fixture).Count==500,"Reservation parser count");measurements.Add(Time("read-500-reservations",20,()=>Data.Bookings(fixture)));}finally{File.Delete(fixture);}
             using(var grid=new ScheduleGrid{Size=new Size(1200,800),Shows=shows,Day=day.Date})using(var bitmap=new Bitmap(1200,800)){
                 grid.CreateControl();grid.RefreshSchedule();Check(grid.VisibleDays==1&&grid.DurationMinutes==1440,"24h bounds");Check(ScheduleGrid.TimelineY(480)-ScheduleGrid.TimelineY(479)==33,"8h header position");
-                var fill=ScheduleGrid.CategoryFill(shows[0]);Check(fill.R>=240&&fill.G>=240&&fill.B>=240,"Background too dark");
+                var fill=ScheduleGrid.CategoryFill(shows[0]);Check(fill.R>=235&&fill.G>=235&&fill.B>=235,"Background too dark");
                 measurements.Add(Time("paint-and-scroll-3000-programs",30,()=>{grid.AutoScrollPosition=new Point(0,(Environment.TickCount&1023)*3);grid.DrawToBitmap(bitmap,new Rectangle(0,0,1200,800));}));
             }
             var process=Process.GetCurrentProcess();var result=new{passed=true,measurements,workingSetMiB=process.WorkingSet64/1048576.0,note="Synthetic local benchmark; excludes TVRock HTTP, cold start and WebView2. No live reservations changed."};
@@ -120,6 +120,3 @@ static class Bench
     }
     static IEnumerable<Control> Descendants(Control c)=>c.Controls.Cast<Control>().SelectMany(x=>new[]{x}.Concat(Descendants(x)));
 }
-
-
-

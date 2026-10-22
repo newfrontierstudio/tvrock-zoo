@@ -33,11 +33,11 @@ internal static class TunerAllocation
     }
     internal static AllocationChoice? Choose(IWin32Window owner,AllocationTask added,List<AllocationTask> existing,Func<int,string> label)
     {
-        var free=Free(added,existing);using var dialog=new Form{Text="予約先を選択",Font=new Font("Meiryo UI",10),ClientSize=new Size(600,370),StartPosition=FormStartPosition.CenterParent,MinimumSize=new Size(550,330)};
+        var free=Free(added,existing);using var dialog=new Form{Text="おすすめの空き録画チャンネル",Font=new Font("Meiryo UI",10),ClientSize=new Size(600,370),StartPosition=FormStartPosition.CenterParent,MinimumSize=new Size(550,330)};
         var text=new Label{Dock=DockStyle.Top,Height=75,Padding=new Padding(14),Text=$"{added.Title}\n{added.Start.ToLocalTime():MM/dd HH:mm} ～ {added.End.ToLocalTime():HH:mm}"};
         var list=new ListBox{Dock=DockStyle.Fill,IntegralHeight=false};var buttons=new FlowLayoutPanel{Dock=DockStyle.Bottom,Height=55,Padding=new Padding(10),FlowDirection=FlowDirection.RightToLeft};
         var cancel=new Button{Text="キャンセル",AutoSize=true,DialogResult=DialogResult.Cancel};var confirm=new Button{Text=free.Count>0?"このチューナーで予約":"再配置案を確認",AutoSize=true,Enabled=free.Count>0||added.Candidates.Length>0};buttons.Controls.AddRange([cancel,confirm]);dialog.Controls.Add(list);dialog.Controls.Add(text);dialog.Controls.Add(buttons);dialog.CancelButton=cancel;
-        foreach(int d in free)list.Items.Add(label(d)+"　予約上の空き");if(free.Count>0)list.SelectedIndex=0;else list.Items.Add("空きがありません。再配置で確保できるか確認します。");
+        foreach(int d in free)list.Items.Add((d==free[0]?"おすすめ　":"変更候補　")+label(d)+"　予約上の空き");if(free.Count>0)list.SelectedIndex=0;else list.Items.Add("空きがありません。再配置で確保できるか確認します。");
         AllocationChoice? choice=null;
         confirm.Click+=(_,_)=>{
             if(free.Count>0){if(list.SelectedIndex<0)return;int d=free[list.SelectedIndex];choice=new(d,new(){{added.Id,d}},[]);dialog.DialogResult=DialogResult.OK;return;}

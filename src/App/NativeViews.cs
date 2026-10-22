@@ -126,7 +126,7 @@ internal sealed partial class MainForm
             _nativeReservations.Rows.Clear();
             foreach(var b in ReservationRows(_nativeBookings,_mergeReservations,_includeFinishedBookings.Checked,DateTimeOffset.Now)){
                 var ai=_nativeAi.FirstOrDefault(a=>IsAiBooking(b,a));string key=b.Fields.GetValueOrDefault("SEARCHID","");var keyword=_nativeKeys.FirstOrDefault(k=>k.Id==key);
-                string word=keyword==null?"手動":string.IsNullOrWhiteSpace(keyword.Title)?keyword.Detail:keyword.Title;
+                string word=BookingSearchWord(b,ai,_nativeKeys);
                 int i=_nativeReservations.Rows.Add(b.Enabled?"○":"×",b.Start.LocalDateTime,(int)Math.Round((b.End-b.Start).TotalMinutes),b.Station,ai?.SearchWord??word,b.Title);
                 var row=_nativeReservations.Rows[i];row.Tag=b;row.Cells[1].Style.Format="MM/dd(ddd) HH:mm";row.Cells[2].Style.Format="0分";
                 if(ai!=null){row.Cells[4].Tag=ai;row.Cells[4].Style.Font=_nativeAiFont;row.Cells[5].Style.Font=_nativeAiFont;row.Cells[5].Style.ForeColor=Ink;row.Cells[4].ToolTipText=(ai.Source=="gpt-preferences"?"GPTの好み条件を参考に、PC内で選んだおすすめ":"PC内で検索条件・予約履歴から選んだおすすめ")+"\n"+ai.Reason;}
@@ -192,13 +192,13 @@ internal sealed partial class MainForm
         var uri=new Uri(ConnectionProfiles.Current.Active.BaseUri,relative);if(!ConnectionProfiles.Current.Active.Allows(uri))throw new InvalidOperationException("接続先がTVRockではありません。");
         return await DiagnosticLogging.Request(RecommendationHome,relative,()=>TvRockHttp.Get(uri));
     }
-    async Task RefreshNativeGuide()
+    async Task RefreshNativeGuide(bool reportFailure=false)
     {
-        if(_guideRefreshing)return;_guideRefreshing=true;
+        if(_guideRefreshing){if(reportFailure)throw new InvalidOperationException("番組表を取得中です。");return;}_guideRefreshing=true;
         try{var now=DateTimeOffset.Now;var day=new DateTimeOffset(now.AddHours(-4).Date,now.Offset);var stations=Data.Tuners(Path.Combine(RockFolder,"dtv.ini")).Stations;var shows=new List<Show>();
             for(int offset=0;offset<192;offset+=6){_nativeStatus.Text=$"番組表を取得中 {offset/6+1}/32（表示・検索は引き続き使えます）";string html=await NativeGet($"day?t={offset}&j=-1&k=-1&v=0");shows.AddRange(Data.Guide(html,offset,day,stations));await Task.Delay(150);}
             if(shows.Count<20)throw new InvalidDataException("番組表の取得件数が足りません。");_nativeShows=shows.GroupBy(s=>s.Key).Select(g=>g.OrderByDescending(s=>s.End).First()).ToList();SaveNativeCache(now);_nativeGuideStamp=now.ToString("MM/dd HH:mm");_nextGuideAttempt=now.AddHours(6);LoadNativeGuideCache();
-        }catch(Exception e){_nativeStatus.Text="TVRockに接続できません。保存済み番組表で利用できます。 "+e.Message;}finally{_guideRefreshing=false;}
+        }catch(Exception e){_nativeStatus.Text="TVRockに接続できません。保存済み番組表で利用できます。 "+e.Message;if(reportFailure)throw;}finally{_guideRefreshing=false;}
     }
     async Task OpenNativeLegacy(string relative)
     {

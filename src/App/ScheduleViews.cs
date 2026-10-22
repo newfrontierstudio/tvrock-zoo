@@ -26,7 +26,7 @@ internal sealed partial class MainForm
         _schedule.BookShow=async s=>await NativeBookShow(s);_schedule.StationOrderChanged=order=>{try{Directory.CreateDirectory(RecommendationHome);File.WriteAllLines(Path.Combine(RecommendationHome,"station-order.txt"),order);}catch(Exception error){MessageBox.Show(this,error.Message,"局の並び順を保存できません");}};guidePage.Enter+=(_,_)=>{if(IsHandleCreated)BeginInvoke((Action)ShowCurrentGuideTime);};
         _schedule.ContextShow=(s,p)=>ShowGuideContext(s,_schedule,p);_nativeGuide.CellMouseClick+=(_,e)=>{if(e.Button==MouseButtons.Right&&e.RowIndex>=0&&_nativeGuide.Rows[e.RowIndex].Tag is Show s)ShowGuideContext(s,_nativeGuide,_nativeGuide.PointToClient(Cursor.Position));};
         _schedule.SelectShow=s=>_nativeStatus.Text=s.Start.ToLocalTime().ToString("MM/dd HH:mm")+" "+s.Station+" "+s.Title;
-        InitializeGuideAssignments();_schedule.HoverShow=(s,p)=>{if(s==null)HideLargeTip();else QueueLargeTip(_schedule,GuidePopupText(s)+AssignmentHover(s),p);};
+        InitializeGuideAssignments();_schedule.HoverShow=(s,p)=>{if(s==null)HideLargeTip();else QueueLargeTip(_schedule,GuidePopupWithSearchWord(s)+AssignmentHover(s),p);};
         _nativeReservations.Tag="date-partitions";_nativeGuide.Tag="date-partitions";
         _nativeReservations.RowPostPaint+=PaintDatePartition;_nativeGuide.RowPostPaint+=PaintDatePartition;
         _nativeKeywords.CellPainting+=PaintKeywordStations;
@@ -51,7 +51,9 @@ internal sealed partial class MainForm
         bool list=_showGuideList.Checked||!string.IsNullOrWhiteSpace(_nativeQuery.Text)||!string.IsNullOrWhiteSpace(_guideNgWords.Text);_nativeGuide.Visible=list;_schedule.Visible=!list;
         if(_schedule.Day!=_scheduleDate.Value.Date)_schedule.AutoScrollPosition=Point.Empty;_schedule.Day=_scheduleDate.Value.Date;
         _schedule.Shows=_nativeShows.Where(s=>_nativeStation.SelectedIndex<=0||s.Station==Convert.ToString(_nativeStation.SelectedItem)).ToList();
-        UpdateGuideAssignments();_schedule.StationOrder=OrderedStations().ToList();_schedule.Disabled=_nativeShows.Where(s=>_nativeBookings.Any(b=>!b.Enabled&&Planner.SameBroadcast(s,b))).Select(s=>s.Key).ToHashSet();_schedule.Booked=_nativeShows.Where(s=>_nativeBookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))).Select(s=>s.Key).ToHashSet();_schedule.RefreshSchedule();
+        var index=new GuideBookingIndex(_nativeBookings);var booked=new HashSet<string>();var disabled=new HashSet<string>();var assignments=new Dictionary<string,GuideAssignment>();
+        foreach(var show in _nativeShows)foreach(var booking in index.Matches(show)){if(booking.Enabled){booked.Add(show.Key);if(!assignments.ContainsKey(show.Key))assignments[show.Key]=AssignmentFor(booking);}else disabled.Add(show.Key);}
+        _schedule.Assignments=assignments;_schedule.StationOrder=OrderedStations().ToList();_schedule.Disabled=disabled;_schedule.Booked=booked;_schedule.RefreshSchedule();
     }
     static void ApplyDatePartitions(DataGridView grid)
     {

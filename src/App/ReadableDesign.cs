@@ -4,8 +4,8 @@ internal sealed partial class MainForm
 {
     readonly FlatHoverCard _largeTip = new();
     readonly System.Windows.Forms.Timer _hoverDelay = new() { Interval=450 };
-    readonly Font _hoverFont = new("Meiryo UI",10.8f,FontStyle.Regular);
-    readonly Font _hoverKeywordFont = new("Meiryo UI",10.8f,FontStyle.Bold);
+    readonly Font _hoverFont = new("Meiryo UI",10.2f,FontStyle.Regular);
+    readonly Font _hoverKeywordFont = new("Meiryo UI",10.2f,FontStyle.Bold);
     Control? _hoverControl;
     string _hoverText="";
     Point _hoverPoint;
@@ -106,18 +106,21 @@ internal sealed partial class MainForm
         var row=grid.Rows[rowIndex];
         TsRecommend.Show? show=row.Tag as TsRecommend.Show;
         string word="";AiEntry? ai=null;
-        if(row.Tag is TsRecommend.Booking booking){show=_nativeShows.FirstOrDefault(s=>TsRecommend.Planner.SameBroadcast(s,booking));word=Convert.ToString(row.Cells[4].Value)??"";ai=row.Cells[4].Tag as AiEntry;}
+        if(row.Tag is TsRecommend.Booking booking){show=_nativeShows.FirstOrDefault(s=>TsRecommend.Planner.SameBroadcast(s,booking));ai=row.Cells[4].Tag as AiEntry;word=BookingSearchWord(booking,ai,_nativeKeys);}
         if(show!=null||grid==_nativeReservations){
             var parts=new List<string>();
+            if(row.Tag is TsRecommend.Show guideShow){string guideWord=GuideSearchWord(guideShow);if(guideWord.Length>0)parts.Add(guideWord);}
+            if(!string.IsNullOrWhiteSpace(word))parts.Add("検索ワード："+word);
             parts.Add(!string.IsNullOrWhiteSpace(show?.Description)?show.Description:"番組説明を取得できていません。番組表を更新してください。");
             if(row.Tag is TsRecommend.Booking timed){var margins=RecordingTiming.Current(timed);parts.Add($"録画時間：開始 {margins.Head:+0;-0;0}秒・終了 {margins.Tail:+0;-0;0}秒");}
             if(ai!=null)parts.Add((ai.Source=="gpt-preferences"?"おすすめの理由（GPTの条件を参考）":"おすすめの理由（PC内で選定）")+"\n"+ai.Reason);
-            if(!string.IsNullOrWhiteSpace(word)&&word!="手動")parts.Add("検索ワード："+word);
+
+
             return string.Join("\n\n",parts);
         }
         return string.IsNullOrWhiteSpace(row.Cells[columnIndex].ToolTipText)?Convert.ToString(row.Cells[columnIndex].FormattedValue)??"":row.Cells[columnIndex].ToolTipText;
     }
-    void QueueLargeTip(Control control,string text,Point point){HideLargeTip();_hoverControl=control;_hoverText=text;_hoverPoint=point;if(text.Length>0)_hoverDelay.Start();}
+    void QueueLargeTip(Control control,string text,Point point){HideLargeTip();if((control==_schedule||control==_nativeGuide)&&!DisplayOptions.Current.GuideDetailsPopup)return;_hoverControl=control;_hoverText=text;_hoverPoint=point;if(text.Length>0)_hoverDelay.Start();}
     void HideLargeTip(){_hoverDelay.Stop();_largeTip.HideCard();_hoverControl=null;}
     void ApplyReadingSize(float size,bool save)
     {
