@@ -8,4 +8,4 @@ TVRock Zoo does not include TVRock or any tuner driver.
 
 Package versions are pinned in project files. Third-party components retain their respective licenses. TVRock Zoo itself is licensed under the MIT License; see LICENSE.
 
-The recorded-media feature and external media executables are not included in version 1.1.
+The media feature invokes separate unmodified executables. FFmpeg, FFprobe and mpv are distributed as an optional media pack, with their own GPL notices and source links in the pack. They are not linked into the application.

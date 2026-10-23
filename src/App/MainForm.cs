@@ -86,6 +86,7 @@ internal sealed partial class MainForm : Form
         };
         FormClosing += (_, e) => HideToTrayWhenClosing(e);
         InitializeNativeViews(toolbar);
+        InitializeRecordedMedia();
         InitializeReservationDeselection();
         InitializeHelpPage();
 
