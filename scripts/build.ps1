@@ -1,7 +1,7 @@
-param([switch]$Installer)
+param([switch]$Installer,[string]$OutputRoot='')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$artifacts = Join-Path $root 'artifacts'
+$artifacts = if($OutputRoot){[IO.Path]::GetFullPath($OutputRoot)}else{Join-Path $root 'artifacts'}
 $app = Join-Path $artifacts 'app'
 New-Item -ItemType Directory -Path $app -Force|Out-Null
 $total=[Diagnostics.Stopwatch]::StartNew()
@@ -14,6 +14,13 @@ dotnet publish (Join-Path $root 'src/Recommend/TsRecommend.csproj') -c Release -
 if ($LASTEXITCODE -ne 0) { throw 'Recommendation build failed' }
 $workerSeconds=$stage.Elapsed.TotalSeconds
 $stage.Restart()
+dotnet publish (Join-Path $root 'src/Inferno/CMCutLab.csproj') -c Release -r win-x64 --self-contained true -p:RuntimeFrameworkVersion=8.0.32 -o (Join-Path $artifacts 'inferno') -v quiet
+if($LASTEXITCODE -ne 0){throw 'Inferno build failed'}
+foreach($name in @('inferno.exe','inferno.dll','inferno.deps.json','inferno.runtimeconfig.json')){Copy-Item (Join-Path $artifacts "inferno/$name") $app -Force}
+$infernoLicense=Join-Path $app 'licenses/Inferno'
+New-Item -ItemType Directory -Path $infernoLicense -Force|Out-Null
+Copy-Item (Join-Path $root 'src/Inferno/THIRD-PARTY-NOTICES.txt') $infernoLicense -Force
+Copy-Item (Join-Path $root 'src/Inferno/licenses/*') $infernoLicense -Force
 Copy-Item (Join-Path $root 'README.md') $app
 Copy-Item (Join-Path $root 'LICENSE') $app
 Copy-Item (Join-Path $root 'BENCHMARKS.md') $app

@@ -1,0 +1,10 @@
+FilmCraft-derived code
+PaceEstimate in RenderJob.cs is adapted from:
+https://github.com/storytold/filmcraft/blob/main/crates/export/src/pace.rs
+Copyright (c) 2026 ArtCraft Team and the FilmCraft contributors.
+Used under the MIT license; full notice: licenses/FilmCraft-MIT.txt.
+The reference revision is recorded in licenses/FilmCraft-revision.txt.
+Other FilmCraft code/assets/branding have not been incorporated.
+
+Playback and encoding executables (mpv/FFmpeg/ffprobe) are provided by the
+separate user-installed ZooMediaTools pack with its own license notices.

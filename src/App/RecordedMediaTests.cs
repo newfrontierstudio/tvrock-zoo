@@ -3,6 +3,32 @@ using System.Text.Json;
 namespace TsScheduler;
 internal static class RecordedMediaTests
 {
+    internal static int InfernoUi(string sample)
+    {
+        string root=Path.Combine(Environment.CurrentDirectory,"work","inferno-link-"+Path.GetFileNameWithoutExtension(Application.ExecutablePath));Directory.CreateDirectory(root);
+        Process? launched=null;
+        try
+        {
+            var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+            using var form=new Form{ClientSize=new Size(1100,760),StartPosition=FormStartPosition.Manual,Location=new Point(-20000,-20000),ShowInTaskbar=false};
+            using var view=new RecordedMediaView(()=>Path.GetDirectoryName(sample)!,()=>root){Dock=DockStyle.Fill};form.Controls.Add(view);form.Show();
+            var info=new FileInfo(sample);var item=new RecordedFile(info.FullName,info.Name,info.LastWriteTime,info.Length,false);
+            typeof(RecordedMediaView).GetField("files",flags)!.SetValue(view,new List<RecordedFile>{item,item with{Recording=true}});
+            typeof(RecordedMediaView).GetMethod("Rebuild",flags)!.Invoke(view,null);Application.DoEvents();
+            var list=(FlowLayoutPanel)typeof(RecordedMediaView).GetField("list",flags)!.GetValue(view)!;
+            var cards=list.Controls.Cast<Control>().Where(c=>c.Tag is ValueTuple<RecordedFile,CheckBox>).ToArray();
+            Button button=cards[0].Controls.OfType<Button>().Single(b=>b.Text=="Inferno");
+            if(!button.Enabled||cards[1].Controls.OfType<Button>().Single(b=>b.Text=="Inferno").Enabled)throw new Exception("Recording exclusion failed");
+            if(button.BackColor!=Color.FromArgb(237,247,248))throw new Exception("Button style mismatch");
+            using(var shot=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(shot,new Rectangle(Point.Empty,shot.Size));shot.Save(Path.Combine(root,"preview.png"));}
+            var before=Process.GetProcessesByName("inferno").Select(p=>p.Id).ToHashSet();button.PerformClick();var watch=Stopwatch.StartNew();
+            while(watch.Elapsed.TotalSeconds<10){Application.DoEvents();launched=Process.GetProcessesByName("inferno").FirstOrDefault(p=>!before.Contains(p.Id)&&p.MainWindowHandle!=IntPtr.Zero);if(launched!=null)break;Thread.Sleep(20);}
+            if(launched==null)throw new Exception("Inferno window did not launch");
+            File.WriteAllText(Path.Combine(root,"result.txt"),"PASS bundled Inferno button opens separate application; completed recording enabled; active recording disabled; matching button color");return 0;
+        }
+        catch(Exception error){File.WriteAllText(Path.Combine(root,"result.txt"),error.ToString());return 1;}
+        finally{launched?.CloseMainWindow();launched?.Dispose();}
+    }
     internal static async Task<int> Run()
     {
         string root=Path.Combine(Environment.CurrentDirectory,"work","media-tests-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"));Directory.CreateDirectory(root);var lines=new List<string>();

@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>inferno</AssemblyName><Product>inferno Studio</Product><AssemblyTitle>inferno Studio</AssemblyTitle><Version>0.5.2</Version><ApplicationIcon>assets/inferno.ico</ApplicationIcon><ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode></PropertyGroup>
+<ItemGroup><None Update="licenses/**;THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup></Project>

@@ -1,4 +1,5 @@
 using TsRecommend;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 namespace TsScheduler;
@@ -118,6 +119,19 @@ internal sealed class RecordedMediaView:UserControl
     internal void ClearLibrarySelection(){if(selected.Count==0&&selectionAnchor==null)return;selected.Clear();selectionAnchor=null;SyncSelection();}
     void SyncSelection(){syncingSelection=true;try{foreach(Control card in list.Controls)if(card.Tag is ValueTuple<RecordedFile,CheckBox> pair){pair.Item2.Checked=selected.Contains(pair.Item1.Path);card.BackColor=pair.Item2.Checked?Color.FromArgb(237,247,248):Color.White;}}finally{syncingSelection=false;}SelectionStatus();}
     void SelectionStatus(){status.Text=$"{files.Count}件 ／ {selected.Count}件選択";convert.Enabled=batch==null&&files.Any(f=>selected.Contains(f.Path)&&!f.Recording&&f.Bytes>0&&Path.GetExtension(f.Path).Equals(".ts",StringComparison.OrdinalIgnoreCase))&&encoder.SelectedItem!=null;}
+    void OpenInferno(RecordedFile file)
+    {
+        try
+        {
+            if(RecordedMediaEngine.BeingWritten(file.Path)){progress.Text="録画が終了してからInfernoで開いてください。";return;}
+            string executable=Path.Combine(AppContext.BaseDirectory,"inferno.exe");
+            if(!File.Exists(executable))throw new FileNotFoundException("Infernoが見つかりません。最新版を再インストールしてください。");
+            playback.Stop();resetPreview?.Invoke();playingFile="";
+            var info=new ProcessStartInfo(executable){UseShellExecute=false,WorkingDirectory=AppContext.BaseDirectory};info.ArgumentList.Add("--open");info.ArgumentList.Add(file.Path);
+            Process.Start(info)?.Dispose();
+        }
+        catch(Exception error) when(error is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception){progress.Text=error.Message;}
+    }
     Control Card(RecordedFile file,CancellationToken ct)
     {
         var card=new Panel{Width=Math.Max(320,list.ClientSize.Width-25),Height=300,Margin=new Padding(0,0,0,8),BackColor=selected.Contains(file.Path)?Color.FromArgb(237,247,248):Color.White};
@@ -126,7 +140,8 @@ internal sealed class RecordedMediaView:UserControl
         var title=new Label{Font=titleFont,Text=(file.Station.Length>0?file.Station+"　":"")+file.Name,Location=new Point(40,8),Height=43,Width=card.Width-50,AutoEllipsis=true,Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right};card.Controls.AddRange([check,title]);card.Tag=(file,check);
         var surface=new Panel{Location=new Point(40,54),Size=new Size(320,180),BackColor=Color.FromArgb(25,36,44)};var image=new PictureBox{Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=surface.BackColor};var videoHost=new Panel{Dock=DockStyle.Fill,BackColor=surface.BackColor};surface.Controls.Add(videoHost);surface.Controls.Add(image);image.BringToFront();card.Controls.Add(surface);
         var details=new Label{AutoSize=false,Location=new Point(375,54),Size=new Size(Math.Max(150,card.Width-390),150),Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right,Text=$"{file.Date:yyyy/MM/dd HH:mm}\n{file.Bytes/1073741824d:F2} GB\n{Path.GetExtension(file.Path).TrimStart('.').ToUpperInvariant()}"+(file.Recording?"\n● 録画中（変換対象外）":"")};card.Controls.Add(details);
-        var conversion=new Label{Location=new Point(600,54),Size=new Size(Math.Max(180,card.Width-620),150),Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right,Text=progressText.GetValueOrDefault(file.Path,"")};card.Controls.Add(conversion);fileProgress[file.Path]=conversion;
+        var inferno=Button("Inferno");inferno.AccessibleName="Infernoで編集";inferno.Enabled=!file.Recording&&file.Bytes>0;card.Controls.Add(inferno);inferno.Click+=(_,_)=>OpenInferno(file);
+        var conversion=new Label{Location=new Point(600,104),Size=new Size(Math.Max(180,card.Width-620),150),Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right,Text=progressText.GetValueOrDefault(file.Path,"")};card.Controls.Add(conversion);fileProgress[file.Path]=conversion;
         Button play=Button("▶"),stop=Button("■");play.AccessibleName="再生・一時停止";stop.AccessibleName="停止";play.Enabled=file.Bytes>0;play.Tag=false;
         play.Paint+=(_,e)=>{e.Graphics.Clear(play.BackColor);int x=(play.ClientSize.Width-12)/2,y=(play.ClientSize.Height-14)/2;using var brush=new SolidBrush(play.ForeColor);if(play.Text=="Ⅱ"){e.Graphics.FillRectangle(brush,x,y,4,14);e.Graphics.FillRectangle(brush,x+8,y,4,14);}else e.Graphics.FillPolygon(brush,new Point[]{new Point(x,y),new Point(x,y+14),new Point(x+12,y+7)});};
         var seek=new TrackBar{Width=150,Height=30,Maximum=1000,TickStyle=TickStyle.None};var volume=new TrackBar{Width=66,Height=30,Maximum=100,Value=70,TickStyle=TickStyle.None,AccessibleName="音量"};var transport=new FlowLayoutPanel{Location=new Point(40,237),Size=new Size(320,42),WrapContents=false,Margin=Padding.Empty};foreach(var b in new[]{play,stop}){b.AutoSize=false;b.Size=new Size(48,38);b.Padding=Padding.Empty;}foreach(Control c in new Control[]{play,stop,seek,volume})c.Margin=Padding.Empty;transport.Controls.AddRange([play,stop,seek,volume]);card.Controls.Add(transport);double duration=0;
@@ -134,7 +149,7 @@ internal sealed class RecordedMediaView:UserControl
         stop.Click+=(_,_)=>{playback.Stop();play.Tag=false;play.Text="▶";image.Visible=true;};seek.MouseUp+=async(_,_)=>{if(play.Tag is true&&duration>0)await playback.Command("seek",duration*seek.Value/1000,"absolute");};volume.ValueChanged+=async(_,_)=>{if(play.Tag is true)await playback.Command("set_property","volume",volume.Value);};
         check.CheckedChanged+=(_,_)=>{if(syncingSelection)return;SelectFile(file,ModifierKeys,check.Checked);};
         foreach(Control target in new Control[]{card,title,image,details})target.MouseDown+=(_,e)=>{if(e.Button==MouseButtons.Left&&check.Enabled)SelectFile(file,ModifierKeys,null);};
-        void LayoutCard(){bool compact=card.Width<800;surface.Top=54;details.Location=compact?new Point(40,290):new Point(375,54);details.Size=new Size(compact?Math.Max(260,card.Width-50):220,150);conversion.Location=compact?new Point(40,445):new Point(610,54);conversion.Size=new Size(compact?Math.Max(260,card.Width-50):Math.Max(150,card.Width-625),120);card.Height=compact?580:300;}
+        void LayoutCard(){bool compact=card.Width<800;surface.Top=54;details.Location=compact?new Point(40,290):new Point(375,54);details.Size=new Size(compact?Math.Max(260,card.Width-50):220,150);inferno.Location=compact?new Point(40,445):new Point(610,54);conversion.Location=compact?new Point(40,495):new Point(610,104);conversion.Size=new Size(compact?Math.Max(260,card.Width-50):Math.Max(150,card.Width-625),120);card.Height=compact?630:300;}
         card.Resize+=(_,_)=>LayoutCard();LayoutCard();
         card.Disposed+=(_,_)=>{image.Image?.Dispose();titleFont.Dispose();};
         _ = LoadImage();return card;

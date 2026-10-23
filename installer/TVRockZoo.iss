@@ -1,7 +1,7 @@
 [Setup]
 AppId={{632AF8C7-589A-433F-93CF-5AF286F6DFE6}
 AppName=TVRock Zoo
-AppVersion=1.1.2
+AppVersion=1.1.3
 AppPublisher=newfrontierstudio
 AppPublisherURL=https://github.com/newfrontierstudio/tvrock-zoo
 DefaultDirName={localappdata}\Programs\TVRockZoo
@@ -11,7 +11,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 OutputDir=..\artifacts
-OutputBaseFilename=TVRockZoo-1.1.2-Setup-x64
+OutputBaseFilename=TVRockZoo-1.1.3-Setup-x64
 SetupIconFile=..\src\App\app.ico
 Uninstallable=yes
 CreateUninstallRegKey=yes
@@ -32,6 +32,7 @@ Name: "desktopicon"; Description: "デスクトップにショートカットを
 Source: "..\artifacts\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,MediaTools\*,media-cache\*"
 
 [Icons]
+Name: "{group}\inferno Studio"; Filename: "{app}\inferno.exe"
 Name: "{group}\TVRock Zoo"; Filename: "{app}\TVRockZoo.exe"
 Name: "{autodesktop}\TVRock Zoo"; Filename: "{app}\TVRockZoo.exe"; Tasks: desktopicon
 
