@@ -115,6 +115,7 @@ internal sealed class RecordedMediaView:UserControl
         else {if((modifiers&Keys.Control)==0&&checkbox==null)selected.Clear();bool add=checkbox??!selected.Contains(file.Path);if(add)selected.Add(file.Path);else selected.Remove(file.Path);selectionAnchor=file.Path;}
         SyncSelection();
     }
+    internal void ClearLibrarySelection(){if(selected.Count==0&&selectionAnchor==null)return;selected.Clear();selectionAnchor=null;SyncSelection();}
     void SyncSelection(){syncingSelection=true;try{foreach(Control card in list.Controls)if(card.Tag is ValueTuple<RecordedFile,CheckBox> pair){pair.Item2.Checked=selected.Contains(pair.Item1.Path);card.BackColor=pair.Item2.Checked?Color.FromArgb(237,247,248):Color.White;}}finally{syncingSelection=false;}SelectionStatus();}
     void SelectionStatus(){status.Text=$"{files.Count}件 ／ {selected.Count}件選択";convert.Enabled=batch==null&&files.Any(f=>selected.Contains(f.Path)&&!f.Recording&&f.Bytes>0&&Path.GetExtension(f.Path).Equals(".ts",StringComparison.OrdinalIgnoreCase))&&encoder.SelectedItem!=null;}
     Control Card(RecordedFile file,CancellationToken ct)
