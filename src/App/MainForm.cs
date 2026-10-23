@@ -88,7 +88,7 @@ internal sealed partial class MainForm : Form
         InitializeNativeViews(toolbar);
         InitializeReservationDeselection();
         InitializeHelpPage();
-        InitializeRecordedMedia();
+
         ApplyFlatSurfaces(this);
         InitializeWindowPlacement();
         Load += (_, _) => LoadNativeData();

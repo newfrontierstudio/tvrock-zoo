@@ -1,7 +1,7 @@
 [Setup]
 AppId={{632AF8C7-589A-433F-93CF-5AF286F6DFE6}
 AppName=TVRock Zoo
-AppVersion=1.0.31
+AppVersion=1.1
 AppPublisher=newfrontierstudio
 AppPublisherURL=https://github.com/newfrontierstudio/tvrock-zoo
 DefaultDirName={localappdata}\Programs\TVRockZoo
@@ -11,7 +11,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 OutputDir=..\artifacts
-OutputBaseFilename=TVRockZoo-1.0.31-Setup-x64
+OutputBaseFilename=TVRockZoo-1.1-Setup-x64
 SetupIconFile=..\src\App\app.ico
 Uninstallable=yes
 CreateUninstallRegKey=yes
@@ -29,13 +29,16 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "desktopicon"; Description: "デスクトップにショートカットを作成"; Flags: unchecked
 
 [Files]
-Source: "..\artifacts\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
+Source: "..\artifacts\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,MediaTools\*,media-cache\*"
 
 [Icons]
 Name: "{group}\TVRock Zoo"; Filename: "{app}\TVRockZoo.exe"
 Name: "{autodesktop}\TVRock Zoo"; Filename: "{app}\TVRockZoo.exe"; Tasks: desktopicon
 
 Name: "{group}\TVRock Zoo をアンインストール"; Filename: "{uninstallexe}"
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\MediaTools"
 
 [Messages]
 ConfirmUninstall=%1 のアプリ本体とショートカットを削除します。よろしいですか？%n%n録画中の場合は終了を待ち、アプリを完全終了してください。%n録画ファイル・予約・設定、TVRock・TVTestは削除しません。%n

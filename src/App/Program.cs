@@ -7,8 +7,6 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-        if(args.Contains("--media-self-test")){Environment.ExitCode=RecordedMediaTests.Run().GetAwaiter().GetResult();return;}
-        if(args.Contains("--media-ui-self-test")){Environment.ExitCode=RecordedMediaTests.Ui();return;}
         using var single=new Mutex(true,"Local\\"+ZooBridge.ZooActivation.PipeName,out bool first);
         if(!first){ZooBridge.ZooActivation.ShowExisting();return;}
         if (!SetupDialog.EnsureConfigured(args.Contains("--setup"))) return;

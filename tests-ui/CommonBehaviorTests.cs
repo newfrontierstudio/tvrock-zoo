@@ -19,5 +19,13 @@ static class CommonBehaviorTests
         using var cancelled=new CancellationTokenSource();cancelled.Cancel();bool stopped=false;
         try{MainForm.CalculateKeywordCandidates([rule],[show],now,cancelled.Token);}catch(OperationCanceledException){stopped=true;}
         Check(stopped,"Superseded candidate refresh can be cancelled");
+        var cache=new MainForm.KeywordCandidateCache();var guide=new[]{show};var first=cache.Get([rule],guide,guide,now,CancellationToken.None);
+        var cloned=rule with{};var again=cache.Get([cloned],guide,guide,now.AddSeconds(1),CancellationToken.None);
+        Check(cache.Calculations==1&&again[0].Value==first[0].Value&&ReferenceEquals(again[0].Key,cloned),"Unchanged guide/rules reuse results and rebind current UI rows");
+        Check(cache.Get([rule with{Title="一致しない"}],guide,guide,now,CancellationToken.None)[0].Value=="取得分に候補なし"&&cache.Calculations==2,"Edited rule invalidates candidate cache");
+        cache.Get([rule],guide,guide,now,CancellationToken.None);var expired=cache.Get([rule],guide,guide,now.AddHours(3),CancellationToken.None);
+        Check(expired[0].Value=="取得分に候補なし"&&cache.Calculations==4,"Programme end expires cached candidates");
+        var fresh=new[]{show with{Title="別の番組"}};Check(cache.Get([rule],fresh,fresh,now,CancellationToken.None)[0].Value=="取得分に候補なし"&&cache.Calculations==5,"New guide invalidates cached matches");
+
     }
 }

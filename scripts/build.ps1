@@ -11,7 +11,6 @@ Copy-Item (Join-Path $root 'LICENSE') $app
 Copy-Item (Join-Path $root 'BENCHMARKS.md') $app
 Copy-Item (Join-Path $root 'THIRD-PARTY-NOTICES.md') $app
 Copy-Item (Join-Path $root 'licenses') $app -Recurse -Force
-& (Join-Path $PSScriptRoot 'Prepare-MediaTools.ps1') -Destination (Join-Path $app 'MediaTools')
 $compiler = @("$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (!$compiler) { throw 'Install Inno Setup 6 first' }
 & $compiler (Join-Path $root 'installer/TVRockZoo.iss')

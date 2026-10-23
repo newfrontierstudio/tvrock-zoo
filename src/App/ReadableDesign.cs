@@ -120,7 +120,7 @@ internal sealed partial class MainForm
         }
         return string.IsNullOrWhiteSpace(row.Cells[columnIndex].ToolTipText)?Convert.ToString(row.Cells[columnIndex].FormattedValue)??"":row.Cells[columnIndex].ToolTipText;
     }
-    void QueueLargeTip(Control control,string text,Point point){HideLargeTip();if((control==_schedule||control==_nativeGuide)&&!DisplayOptions.Current.GuideDetailsPopup)return;_hoverControl=control;_hoverText=text;_hoverPoint=point;if(text.Length>0)_hoverDelay.Start();}
+    void QueueLargeTip(Control control,string text,Point point){HideLargeTip();if((control==_nativeReservations||control==_disabledReservations)&&!DisplayOptions.Current.ReservationDetailsPopup)return;if((control==_schedule||control==_nativeGuide)&&!DisplayOptions.Current.GuideDetailsPopup)return;_hoverControl=control;_hoverText=text;_hoverPoint=point;if(text.Length>0)_hoverDelay.Start();}
     void HideLargeTip(){_hoverDelay.Stop();_largeTip.HideCard();_hoverControl=null;}
     void ApplyReadingSize(float size,bool save)
     {

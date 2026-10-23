@@ -225,13 +225,11 @@ internal sealed partial class MainForm
             // Verify the live guide's event and time before using a cached action.
             int offset=(int)Math.Floor((s.Start-new DateTimeOffset(DateTimeOffset.Now.AddHours(-4).Date,DateTimeOffset.Now.Offset).AddHours(4)).TotalHours/6)*6;
             if(offset<0||offset>=192)throw new InvalidOperationException("番組表を更新してください。");
-            string live=await NativeGet($"day?t={offset}&j=-1&k=-1&v=0");var current=Data.Guide(live,offset,new DateTimeOffset(DateTimeOffset.Now.AddHours(-4).Date,DateTimeOffset.Now.Offset),Data.Tuners(Path.Combine(RockFolder,"dtv.ini")).Stations).SingleOrDefault(x=>x.Key==s.Key&&Data.Norm(x.Title)==Data.Norm(s.Title));
-            if(current==null||!current.Actions.TryGetValue(device.Value,out action))throw new InvalidOperationException("放送内容が変わりました。番組表を更新してください。");
-            var q=Data.Query(action);if(q.GetValueOrDefault("c")!=s.ServiceId.ToString()||q.GetValueOrDefault("e")!=s.EventId.ToString()||q.GetValueOrDefault("d")!=device.ToString()||q.GetValueOrDefault("r")!="1")throw new InvalidDataException("予約リンクの照合に失敗しました。");
+            string live=await NativeGet($"day?t={offset}&j=-1&k=-1&v=0");var current=GuideReservationTransaction.Verify(s,Data.Guide(live,offset,new DateTimeOffset(DateTimeOffset.Now.AddHours(-4).Date,DateTimeOffset.Now.Offset),Data.Tuners(Path.Combine(RockFolder,"dtv.ini")).Stations),device.Value);
             await ApplyNativeAllocation(allocation,bookings);bookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));if(bookings.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))||!ReservationDeviceAvailable(s,tuners,bookings,device.Value))throw new InvalidOperationException("予約状況が変わりました。一覧を更新してください。");
             string backup=Path.Combine(RecommendationHome,"manual-history",DateTime.Now.ToString("yyyyMMdd-HHmmssfff"));Directory.CreateDirectory(backup);File.Copy(Path.Combine(RockFolder,"tvrock.sch"),Path.Combine(backup,"tvrock-before.sch"));
             _nativeStatus.Text="TVRockへ予約を送信中："+s.Title;
-            await NativeGet(action);bool applied=false;for(int attempt=0;attempt<20;attempt++){await Task.Delay(250);var after=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));if(after.Any(b=>b.Enabled&&Planner.SameBroadcast(s,b))){applied=true;break;}}if(!applied)throw new InvalidOperationException("予約を送信しましたが、反映を確認できません。再試行する前に予約一覧をご確認ください。");LoadNativeReservations();RenderNativeGuide();_nativeStatus.Text="予約しました："+s.Title;MessageBox.Show(this,"予約しました。",s.Title);
+            await GuideReservationTransaction.Send(current,device.Value,NativeGet,()=>Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")));LoadNativeReservations();RenderNativeGuide();_nativeStatus.Text="予約しました："+s.Title;MessageBox.Show(this,"予約しました。",s.Title);
         }catch(Exception e){_nativeStatus.Text="予約を完了できませんでした："+e.Message;MessageBox.Show(this,e.Message,"予約を完了できませんでした");}finally{_manualBookingBusy=false;UseWaitCursor=false;}
     }
 }

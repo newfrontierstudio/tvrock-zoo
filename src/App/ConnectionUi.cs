@@ -2,10 +2,11 @@ using TsRecommend;
 namespace TsScheduler;
 internal sealed partial class MainForm
 {
+    FlowLayoutPanel? connectionDetails;
     void InitializeConnections(FlowLayoutPanel toolbar)
     {
-        var button=new Button{Text="TVRockの接続設定",AutoSize=true};_detailLanding.Controls.OfType<FlowLayoutPanel>().First().Controls.Add(button);Text=$"TVRock Zoo — {ConnectionProfiles.Current.Active.Name} — 予約・番組表 Ver.{Application.ProductVersion.Split('+')[0]}";StyleControls(button);
-        var setup=new Button{Text="初期設定をやり直す",AutoSize=true};_detailLanding.Controls.OfType<FlowLayoutPanel>().First().Controls.Add(setup);StyleControls(setup);setup.Click+=(_,_)=>ReopenSetup();
+        var button=new Button{Text="TVRockの接続設定",AutoSize=true};(connectionDetails??_detailLanding.Controls.OfType<FlowLayoutPanel>().First()).Controls.Add(button);Text=$"TVRock Zoo — {ConnectionProfiles.Current.Active.Name} — 予約・番組表 Ver.{Application.ProductVersion.Split('+')[0]}";StyleControls(button);
+        var setup=new Button{Text="初期設定をやり直す",AutoSize=true};(connectionDetails??_detailLanding.Controls.OfType<FlowLayoutPanel>().First()).Controls.Add(setup);StyleControls(setup);setup.Click+=(_,_)=>ReopenSetup();
         button.Click+=(_,_)=>{
             using var dialog=new Form{Text="TVRockの接続設定",ClientSize=new Size(650,350),Font=Font,StartPosition=FormStartPosition.CenterParent,MinimumSize=new Size(600,390)};
             var panel=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(18),ColumnCount=2,RowCount=6};panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,140));panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));dialog.Controls.Add(panel);
