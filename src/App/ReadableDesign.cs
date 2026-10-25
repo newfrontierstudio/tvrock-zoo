@@ -85,6 +85,7 @@ internal sealed partial class MainForm
     }
     void StyleControls(Control root)
     {
+        if(root is StationColorButton station){station.FlatStyle=FlatStyle.Flat;station.BackColor=StationBadgeRenderer.Background((string)station.Tag!);station.ForeColor=StationBadgeRenderer.Foreground(station.BackColor);station.Cursor=Cursors.Hand;return;}
         if(root is Button button){RoundedControls.Apply(button);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=button==_recommend?_recommendToggle.BackColor:(button.Text is "一覧を更新" or "文字 −" or "文字 ＋" or "元に戻す"?Color.FromArgb(237,239,242):Color.FromArgb(231,238,247));button.ForeColor=Ink;button.Padding=new Padding(9,4,9,4);button.Margin=new Padding(4,3,8,3);button.Cursor=Cursors.Hand;button.MinimumSize=new Size(0,33);}
         if(root is CheckBox check){check.ForeColor=Ink;check.Margin=new Padding(8,6,10,4);}
         if(root is FlowLayoutPanel flow){flow.BackColor=Color.White;flow.Padding=new Padding(4,4,4,5);}

@@ -1,4 +1,4 @@
-param([switch]$Installer,[string]$OutputRoot='')
+param([switch]$Installer,[string]$OutputRoot='',[string]$InfernoPackage='')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $artifacts = if($OutputRoot){[IO.Path]::GetFullPath($OutputRoot)}else{Join-Path $root 'artifacts'}
@@ -14,9 +14,12 @@ dotnet publish (Join-Path $root 'src/Recommend/TsRecommend.csproj') -c Release -
 if ($LASTEXITCODE -ne 0) { throw 'Recommendation build failed' }
 $workerSeconds=$stage.Elapsed.TotalSeconds
 $stage.Restart()
-dotnet publish (Join-Path $root 'src/Inferno/CMCutLab.csproj') -c Release -r win-x64 --self-contained true -p:RuntimeFrameworkVersion=8.0.32 -o (Join-Path $artifacts 'inferno') -v quiet
-if($LASTEXITCODE -ne 0){throw 'Inferno build failed'}
-foreach($name in @('inferno.exe','inferno.dll','inferno.deps.json','inferno.runtimeconfig.json')){Copy-Item (Join-Path $artifacts "inferno/$name") $app -Force}
+if($InfernoPackage){$infernoSource=[IO.Path]::GetFullPath($InfernoPackage)}else{
+ dotnet publish (Join-Path $root 'src/Inferno/CMCutLab.csproj') -c Release -r win-x64 --self-contained true -p:RuntimeFrameworkVersion=8.0.32 -o (Join-Path $artifacts 'inferno') -v quiet
+ if($LASTEXITCODE -ne 0){throw 'Inferno build failed'}
+ $infernoSource=Join-Path $artifacts 'inferno'
+}
+foreach($name in @('inferno.exe','inferno.dll','inferno.deps.json','inferno.runtimeconfig.json')){Copy-Item (Join-Path $infernoSource $name) $app -Force}
 $infernoLicense=Join-Path $app 'licenses/Inferno'
 New-Item -ItemType Directory -Path $infernoLicense -Force|Out-Null
 Copy-Item (Join-Path $root 'src/Inferno/THIRD-PARTY-NOTICES.txt') $infernoLicense -Force
@@ -32,7 +35,7 @@ if($Installer){
 $stage.Restart()
 $compiler = @("$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (!$compiler) { throw 'Install Inno Setup 6 first' }
-& $compiler (Join-Path $root 'installer/TVRockZoo.iss')
+& $compiler "/DBuildRoot=$artifacts" (Join-Path $root 'installer/TVRockZoo.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
 
 $installerSeconds=$stage.Elapsed.TotalSeconds

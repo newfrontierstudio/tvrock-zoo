@@ -8,10 +8,10 @@ internal sealed partial class MainForm
         var viewport=new Panel{Dock=DockStyle.Fill};var scroll=new ModernScrollBar{Dock=DockStyle.Right};
         var body=new FlowLayoutPanel{AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(22,14,22,14),BackColor=Color.White};
         viewport.Controls.Add(body);page.Controls.Add(viewport);page.Controls.Add(scroll);_tabs.TabPages.Add(page);
-        var sections=new List<HelpSection>();HelpSection? current=null;var index=new FlowLayoutPanel{AutoSize=true,WrapContents=true,MaximumSize=new Size(740,0),Margin=new Padding(0,0,0,12)};
+        var sections=new List<HelpSection>();HelpSection? current=null;
         var actions=new FlowLayoutPanel{AutoSize=true};var expand=new Button{Text="すべて開く",AutoSize=true};var collapse=new Button{Text="すべて閉じる",AutoSize=true};actions.Controls.AddRange([expand,collapse]);body.Controls.Add(actions);StyleControls(actions);expand.Click+=(_,_)=>{foreach(var item in sections)item.Expanded=true;};collapse.Click+=(_,_)=>{foreach(var item in sections)item.Expanded=false;};
-        void TextBlock(string text,bool heading=false){if(heading){if(text=="TVRock Zoo の使い方"){body.Controls.Add(new Label{Text=text,AutoSize=true,Font=new Font(Font,FontStyle.Bold),Margin=new Padding(0,4,0,8)});return;}current=new HelpSection(text,Font);sections.Add(current);body.Controls.Add(current);var target=current;var jump=new LinkLabel{Text=text,AutoSize=true,Margin=new Padding(0,4,16,4)};jump.LinkClicked+=(_,_)=>{target.Expanded=true;scroll.Value=Math.Min(target.Top,scroll.Maximum);};index.Controls.Add(jump);return;}var label=new SelectableHelpText{Text=text,ForeColor=Ink,Font=Font,Margin=new Padding(4,4,4,10)};(current?.Content.Controls??body.Controls).Add(label);}
-        TextBlock(@"TVRock Zoo の使い方",true);body.Controls.SetChildIndex(actions,1);body.Controls.Add(index);
+        void TextBlock(string text,bool heading=false){if(heading){if(text=="TVRock Zoo の使い方"){body.Controls.Add(new Label{Text=text,AutoSize=true,Font=new Font(Font,FontStyle.Bold),Margin=new Padding(0,4,0,8)});return;}current=new HelpSection(text,Font);sections.Add(current);body.Controls.Add(current);return;}var label=new SelectableHelpText{Text=text,ForeColor=Ink,Font=Font,Margin=new Padding(4,4,4,10)};(current?.Content.Controls??body.Controls).Add(label);}
+        TextBlock(@"TVRock Zoo の使い方",true);body.Controls.SetChildIndex(actions,1);
         InitializeProblemReporting(body.Controls);
 
         TextBlock(@"TVRockの予約・番組表を専用画面で操作する非公式ツールです。録画はTVRockが担当します。");
@@ -64,7 +64,7 @@ URLと共有フォルダーは同じTVRockを指定してください。保存�
         var secondary=new Button{Text=hasPayPal?"PayPalで応援する":"PayPal（受け取りリンク準備中）",Enabled=hasPayPal,AutoSize=true,Margin=new Padding(0,3,0,6)};current!.Content.Controls.Add(secondary);StyleControls(secondary);
         secondary.Click+=(_,_)=>{try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(paypal){UseShellExecute=true});}catch(Exception e){MessageBox.Show(this,e.Message,"PayPalを開けませんでした");}};
         bool fitting=false;
-        void FitText(){if(fitting)return;fitting=true;try{int width=Math.Max(180,viewport.ClientSize.Width-body.Padding.Horizontal-8);body.Width=viewport.ClientSize.Width;index.MaximumSize=new Size(width,0);foreach(var section in sections)section.SetWidth(width);foreach(var label in body.Controls.OfType<SelectableHelpText>()){label.Width=width;label.FitHeight();}scroll.LargeChange=Math.Max(1,viewport.Height);scroll.Maximum=Math.Max(0,body.Height-1);scroll.Visible=body.Height>viewport.Height;body.Top=-scroll.Value;}finally{fitting=false;}}
+        void FitText(){if(fitting)return;fitting=true;try{int width=Math.Max(180,viewport.ClientSize.Width-body.Padding.Horizontal-8);body.Width=viewport.ClientSize.Width;foreach(var section in sections)section.SetWidth(width);foreach(var label in body.Controls.OfType<SelectableHelpText>()){label.Width=width;label.FitHeight();}scroll.LargeChange=Math.Max(1,viewport.Height);scroll.Maximum=Math.Max(0,body.Height-1);scroll.Visible=body.Height>viewport.Height;body.Top=-scroll.Value;}finally{fitting=false;}}
         scroll.ValueChanged+=(_,_)=>body.Top=-scroll.Value;viewport.SizeChanged+=(_,_)=>FitText();body.SizeChanged+=(_,_)=>FitText();viewport.MouseWheel+=(_,e)=>scroll.Value-=e.Delta;foreach(var section in sections)foreach(Control control in section.Content.Controls)control.MouseWheel+=(_,e)=>scroll.Value-=e.Delta;page.Enter+=(_,_)=>FitText();FitText();
 
     }

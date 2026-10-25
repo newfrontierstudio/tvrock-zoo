@@ -3,6 +3,26 @@ using System.Text.Json;
 namespace TsScheduler;
 internal static class RecordedMediaTests
 {
+    internal static int ScrollUi()
+    {
+        string root=Path.Combine(Environment.CurrentDirectory,"work","media-scroll-test-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"));Directory.CreateDirectory(root);var previous=MediaToolsSupport.TestHome;MediaToolsSupport.TestHome=Path.Combine(root,"no-tools");
+        var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+        try{
+            for(int i=0;i<40;i++)File.WriteAllText(Path.Combine(root,"synthetic-"+i+".mp4"),"synthetic layout test only");
+            using var form=new Form{ClientSize=new Size(1050,750),StartPosition=FormStartPosition.Manual,Location=new Point(-20000,-20000),ShowInTaskbar=false};using var view=new RecordedMediaView(()=>root,()=>root){Dock=DockStyle.Fill};form.Controls.Add(view);form.Show();view.ActivateLibrary();
+            var list=(ChromeMediaList)typeof(RecordedMediaView).GetField("list",flags)!.GetValue(view)!;
+            void Wait(Func<bool> done){var watch=Stopwatch.StartNew();while(!done()&&watch.Elapsed.TotalSeconds<5){Application.DoEvents();Thread.Sleep(10);}if(!done())throw new Exception("Recorded list did not settle");}
+            Wait(()=>list.Controls.Count>=12);while(list.Controls.Count<40)typeof(RecordedMediaView).GetMethod("AppendPage",flags)!.Invoke(view,null);Application.DoEvents();
+            list.SetOffset(1200,false);Application.DoEvents();int offset=list.Offset;var first=list.Controls[0];
+            view.StopPlayback();view.ActivateLibrary();for(int i=0;i<20;i++){Application.DoEvents();Thread.Sleep(10);}
+            if(first.IsDisposed||!ReferenceEquals(first,list.Controls[0])||list.Offset!=offset)throw new Exception("Switching back rebuilt or moved the recorded list");
+            typeof(RecordedMediaView).GetMethod("Rebuild",flags)!.Invoke(view,null);Application.DoEvents();if(list.Offset!=offset||list.Controls.Count<40)throw new Exception("Refresh lost the viewport or loaded pages");
+            foreach(int width in new[]{560,1050,760}){form.ClientSize=new Size(width,750);Application.DoEvents();if(list.HorizontalScroll.Visible||list.DisplayRectangle.Width>list.ClientSize.Width+1)throw new Exception("Horizontal overflow at width "+width);foreach(Control card in list.Controls)if(card.Width>list.ClientSize.Width)throw new Exception("Card wider than viewport");}
+            list.SetOffset(800,false);list.Wheel(-120);if(list.Offset<=800)throw new Exception("Thin scrollbar wheel did not move down");
+            using var bitmap=new Bitmap(form.Width,form.Height);form.DrawToBitmap(bitmap,new Rectangle(Point.Empty,bitmap.Size));bitmap.Save(Path.Combine(root,"preview.png"));
+            File.WriteAllText(Path.Combine(root,"result.txt"),"PASS: tab re-entry preserves card instances and offset; refresh retains pages and offset; no horizontal overflow at 560/760/1050; custom wheel scrolls vertically");return 0;
+        }catch(Exception error){File.WriteAllText(Path.Combine(root,"result.txt"),error.ToString());return 1;}finally{MediaToolsSupport.TestHome=previous;}
+    }
     internal static int InfernoUi(string sample)
     {
         string root=Path.Combine(Environment.CurrentDirectory,"work","inferno-link-"+Path.GetFileNameWithoutExtension(Application.ExecutablePath));Directory.CreateDirectory(root);
@@ -94,6 +114,7 @@ internal static class RecordedMediaTests
             void Choose(int index,Keys keys)=>select.Invoke(view,[files[index],keys,null]);
             Choose(0,Keys.None);Choose(2,Keys.Control);if(!selected.SetEquals(new[]{files[0].Path,files[2].Path}))throw new Exception("Ctrl multi selection");Choose(3,Keys.Shift);if(!selected.SetEquals(new[]{files[2].Path,files[3].Path}))throw new Exception("Shift range selection");Choose(0,Keys.Control|Keys.Shift);if(selected.Count!=4)throw new Exception("Ctrl Shift additive range");Choose(1,Keys.None);if(selected.Count!=1||!selected.Contains(files[1].Path))throw new Exception("Plain selection");
             var list=(FlowLayoutPanel)typeof(RecordedMediaView).GetField("list",flags)!.GetValue(view)!;var card=list.Controls.Cast<Control>().First(c=>c.Tag is ValueTuple<RecordedFile,CheckBox>);var title=card.Controls.OfType<Label>().First();if(!title.Font.Bold||Math.Abs(title.Font.Size-view.Font.Size)>.01)throw new Exception("Title font weight/size");
+            var unused=card.Controls.OfType<Label>().Last();typeof(Control).GetMethod("OnMouseDown",flags)!.Invoke(unused,[new MouseEventArgs(MouseButtons.Left,1,unused.Width-10,unused.Height-10,0)]);if(!selected.SetEquals(new[]{((ValueTuple<RecordedFile,CheckBox>)card.Tag!).Item1.Path}))throw new Exception("Right-hand card whitespace not selectable");
             var play=card.Controls.OfType<FlowLayoutPanel>().Single().Controls.OfType<Button>().First();play.Text="Ⅱ";using(var image=new Bitmap(play.Width,play.Height)){play.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(root,"pause.png"));}
             using(var shot=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(shot,new Rectangle(Point.Empty,shot.Size));shot.Save(Path.Combine(root,"preview.png"));}
             if(!new DisplayOptions().ReservationDetailsPopup)throw new Exception("Popup default must be on");File.WriteAllText(Path.Combine(root,"result.txt"),"PASS Ctrl/Shift/CtrlShift/plain selection; MP4 selectable; title bold same size; pause drawn; popup default on");form.Close();return 0;

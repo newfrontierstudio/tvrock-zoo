@@ -23,11 +23,11 @@ internal sealed partial class MainForm
     {
         // A media card (including its unused right-hand area) is a selectable item.
         for(Control? parent=clicked;parent!=null;parent=parent.Parent)if(parent.Tag is ValueTuple<RecordedFile,CheckBox>)return false;
-        if(clicked is DataGridView grid)return grid.HitTest(location.X,location.Y).Type==DataGridViewHitTestType.None;
-        if(clicked is ScheduleGrid schedule)return schedule.IsBlankProgrammeSpace(location);
-        if(clicked is ListBox list)return list is not CheckedListBox&&list.IndexFromPoint(location)==ListBox.NoMatches;
-        if(clicked is TabControl tabs)return !Enumerable.Range(0,tabs.TabCount).Any(i=>tabs.GetTabRect(i).Contains(location));
-        return clicked is Panel or GroupBox or MainForm or RecordedMediaView;
+        for(Control? current=clicked;current!=null;current=current.Parent){if(current is TabPage)return false;if(current is MainForm owner){
+            // Only unused space above the tabs clears selection; settings content stays active.
+            return clicked is Panel or MainForm && clicked.PointToScreen(location).Y<owner._tabs.PointToScreen(Point.Empty).Y;
+        }}
+        return false;
     }
     internal void ClearAllTabSelections()
     {
@@ -37,7 +37,7 @@ internal sealed partial class MainForm
                 case DataGridView grid:ClearReservationSelection(grid);break;
                 case ScheduleGrid schedule:if(schedule.Selected!=null){schedule.Selected=null;schedule.Invalidate();}break;
                 case RecordedMediaView media:media.ClearLibrarySelection();break;
-                case ListBox list:list.ClearSelected();break;
+                case ListBox list when list.AccessibleName!="設定メニュー":list.ClearSelected();break;
             }
         }
         HideLargeTip();

@@ -17,11 +17,15 @@ internal sealed partial class MainForm
         selectedLabel.Width=Math.Max(300,names.Max(n=>TextRenderer.MeasureText("局名の背景色　編集中："+n,selectedLabel.Font).Width)+12);selectedLabel.Height=choose.PreferredSize.Height+choose.Margin.Vertical;
         void Fit(){int width=Math.Max(240,_detailLanding.ClientSize.Width-60);badges.MaximumSize=new Size(width,0);badges.Width=width;}body.SizeChanged+=(_,_)=>Fit();Fit();
         void Preview(){selectedLabel.Text="局名の背景色　編集中："+selected;foreach(Button badge in badges.Controls){string station=(string)badge.Tag!;badge.BackColor=StationBadgeRenderer.Background(station);badge.ForeColor=StationBadgeRenderer.Foreground(badge.BackColor);bool active=Data.SameStation(station,selected);badge.FlatAppearance.BorderSize=active?20:0;badge.FlatAppearance.BorderColor=Color.FromArgb(202,207,212);badge.AccessibleName=station+(active?" 編集中":" 選択して色を編集");}}
-        void Change(Color color){try{DisplayOptions.Current.StationColors[Data.StationKey(selected)]=color.ToArgb();DisplayOptions.Current.Save();Preview();ApplyDisplayOptions();}catch(Exception error){MessageBox.Show(this,error.Message,"色を保存できません");}}
         foreach(string station in names){var badge=new StationColorButton{Text=station=="MX1"?"MX":station,Tag=station,AutoSize=false,Width=124,Height=74,AutoEllipsis=true};badges.Controls.Add(badge);StyleControls(badge);badge.Click+=(_,_)=>{selected=station;Preview();};badge.DoubleClick+=(_,_)=>{selected=station;Preview();choose.PerformClick();};}
         InitializeStationBadgeReordering(badges);
-        choose.Click+=(_,_)=>{using var dialog=new ColorDialog{Color=StationBadgeRenderer.Background(selected),FullOpen=true};if(dialog.ShowDialog(this)==DialogResult.OK)Change(dialog.Color);};
-        reset.Click+=(_,_)=>{try{DisplayOptions.Current.StationColors.Remove(Data.StationKey(selected));DisplayOptions.Current.Save();Preview();ApplyDisplayOptions();}catch(Exception error){MessageBox.Show(this,error.Message);}};
+        choose.Click+=(_,_)=>{
+            string key=Data.StationKey(selected);var options=DisplayOptions.Current;bool had=options.StationColors.TryGetValue(key,out int old),exact=options.ExactStationColors.Contains(key),committed=false;
+            try{using var dialog=new StudioColorPicker(StationBadgeRenderer.Background(selected));dialog.ColorChanged+=color=>{options.StationColors[key]=color.ToArgb();options.ExactStationColors.Add(key);Preview();ApplyDisplayOptions();};if(dialog.ShowDialog(this)==DialogResult.OK){options.StationColors[key]=dialog.SelectedColor.ToArgb();options.ExactStationColors.Add(key);options.Save();committed=true;}}
+            catch(Exception error){MessageBox.Show(this,error.Message,"色を保存できません");}
+            finally{if(!committed){if(had)options.StationColors[key]=old;else options.StationColors.Remove(key);if(exact)options.ExactStationColors.Add(key);else options.ExactStationColors.Remove(key);}Preview();ApplyDisplayOptions();}
+        };
+        reset.Click+=(_,_)=>{try{DisplayOptions.Current.StationColors.Remove(Data.StationKey(selected));DisplayOptions.Current.ExactStationColors.Remove(Data.StationKey(selected));DisplayOptions.Current.Save();Preview();ApplyDisplayOptions();}catch(Exception error){MessageBox.Show(this,error.Message);}};
         Preview();
     }
 }

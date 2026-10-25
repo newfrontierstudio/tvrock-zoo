@@ -5,6 +5,7 @@ internal sealed partial class MainForm
     // A cached text search is advisory; TVRock remains authoritative for all reservation conditions.
     internal static bool KeywordTextCandidate(KeywordEntry key, Show show,bool stationAlreadyMatched=false)
     {
+        if(key.Fields?.TryGetValue("STUDIOMINPROGRAMSECONDS",out string? threshold)==true){if(!int.TryParse(threshold,out int seconds)||seconds is <0 or >599999)throw new InvalidDataException("番組の長さの設定を確認してください。");if(seconds>0&&(show.End-show.Start).TotalSeconds<=seconds)return false;}
         if (!stationAlreadyMatched && key.Stations.Length > 0 && !key.Stations.Split(" / ").Any(station=>Data.SameStation(station,show.Station))) return false;
         if (key.Days.Length > 0 && !key.Days.Contains("日月火水木金土"[(int)show.Start.DayOfWeek])) return false;
         if (!MatchesQuery(show,key.Title)) return false;
@@ -42,7 +43,7 @@ internal sealed partial class MainForm
                 string value=count==0?"取得分に候補なし":$"{count}件｜{hits[0].Start:MM/dd HH:mm} {hits[0].Title}";
                 string tooltip="保存済み番組表のタイトル・詳細・局・曜日による参考候補です。時間・ジャンル・放送種別やTVRock固有の検索方式は未反映です。\n"+string.Join("\n",hits.Select(s=>$"{s.Start:MM/dd HH:mm} {s.Station} {s.Title}"));
                 results.Add(new(key,value,tooltip));
-            } catch(Exception e) when(e is ArgumentException or System.Text.RegularExpressions.RegexMatchTimeoutException) {results.Add(new(key,"検索式を確認","この検索式の参考候補を計算できません。検索ワードで探す／条件を編集をご利用ください。"));}
+            } catch(Exception e) when(e is ArgumentException or InvalidDataException or System.Text.RegularExpressions.RegexMatchTimeoutException) {results.Add(new(key,"検索条件を確認","この検索条件の参考候補を計算できません。条件を編集をご利用ください。"));}
         }
         return results.ToArray();
     }
@@ -56,7 +57,7 @@ internal sealed partial class MainForm
         int version=++keywordCandidateVersion;
         var rows=_nativeKeywords.Rows.Cast<DataGridViewRow>().Where(r=>r.Tag is KeywordEntry).ToArray();
         var keys=rows.Select(r=>(KeywordEntry)r.Tag!).ToArray();var guideIdentity=_nativeShows;var shows=_nativeShows.ToArray();var now=DateTimeOffset.Now;
-        foreach(var row in rows)row.Cells["candidates"].Value=shows.Length==0?"番組表未取得":"候補を検索中…";
+        // Keep the previous result visible until a changed result is ready.
         try
         {
             var results=await Task.Run(()=>keywordCandidateCache.Get(keys,shows,guideIdentity,now,cancellation.Token),cancellation.Token);

@@ -24,7 +24,7 @@ internal sealed partial class MainForm
                     try{await NativeGet("kwl?"+string.Join("&",fields.Select(p=>Data.Encode(p.Key)+"="+Data.Encode(p.Value))));}catch(Exception error)when(error is HttpRequestException or TaskCanceledException){transport=error;}
                     bool removed=false;for(int attempt=0;attempt<12;attempt++){await Task.Delay(250);var afterKeys=ReadKeywords(Path.Combine(RockFolder,"tvrock.key"));removed=afterKeys.Count==beforeKeys.Count-1&&!afterKeys.Any(k=>k.Id==id)&&beforeKeys.Where(k=>k.Id!=id).All(k=>afterKeys.Any(a=>a.Id==k.Id));if(removed)break;}
                     if(!removed)throw new IOException("削除の反映を確認できませんでした。二重送信はせず、一覧を読み直します。",transport);
-                    LoadNativeData();
+                    int row=_nativeKeywords.FirstDisplayedScrollingRowIndex,horizontal=_nativeKeywords.HorizontalScrollingOffset;using(var redraw=((StableGrid)_nativeKeywords).Freeze()){LoadNativeData();_nativeKeywords.CurrentCell=null;_nativeKeywords.ClearSelection();if(row>=0&&_nativeKeywords.Rows.Count>0)_nativeKeywords.FirstDisplayedScrollingRowIndex=Math.Min(row,_nativeKeywords.Rows.Count-1);_nativeKeywords.HorizontalScrollingOffset=horizontal;}
                     _webBrowser.CoreWebView2.Navigate(new Uri(origin,"kwl").AbsoluteUri);
                 }catch(Exception error){Log("自動検索予約の削除: "+error);MessageBox.Show(this,error.Message,"自動検索予約の削除");_webBrowser.CoreWebView2.Navigate(new Uri(ConnectionProfiles.Current.Active.BaseUri,"kwl").AbsoluteUri);}
                 finally{_keywordDeleteSending=false;}

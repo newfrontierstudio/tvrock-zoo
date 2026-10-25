@@ -15,7 +15,7 @@ internal static class StationBadgeRenderer
         static double Inv(double t)=>t>6d/29?t*t*t:3*Math.Pow(6d/29,2)*(t-4d/29);
         double x=.95047*Inv(fx),y=Inv(fy),z=1.08883*Inv(fz);
         static int Srgb(double c)=>(int)Math.Round(Math.Clamp(c<=.0031308?12.92*c:1.055*Math.Pow(c,1/2.4)-.055,0,1)*255);
-        return IncreaseChroma(Color.FromArgb(Srgb(3.2404542*x-1.5371385*y-.4985314*z),Srgb(-.969266*x+1.8760108*y+.041556*z),Srgb(.0556434*x-.2040259*y+1.0572252*z)),1.1);
+        return IncreaseChroma(IncreaseChroma(Color.FromArgb(Srgb(3.2404542*x-1.5371385*y-.4985314*z),Srgb(-.969266*x+1.8760108*y+.041556*z),Srgb(.0556434*x-.2040259*y+1.0572252*z)),1.1),1.07);
     }
     internal static Color IncreaseChroma(Color color,double amount)
     {
@@ -50,7 +50,7 @@ internal static class StationBadgeRenderer
         var previous=graphics.SmoothingMode;graphics.SmoothingMode=SmoothingMode.AntiAlias;
         using(var fill=new SolidBrush(disabled?Color.FromArgb(239,241,243):Background(station)))graphics.FillPath(fill,path);
         graphics.SmoothingMode=previous;
-        var background=Background(station);TextRenderer.DrawText(graphics,label,small,rect,disabled?Color.FromArgb(111,118,125):DisplayOptions.Current.StationColors.ContainsKey(Data.StationKey(station))?Foreground(background):Color.FromArgb(82,96,109),flags);
+        var background=Background(station);var textRect=rect;textRect.Offset(0,(int)Math.Round(scale));TextRenderer.DrawText(graphics,label,small,textRect,disabled?Color.FromArgb(111,118,125):DisplayOptions.Current.StationColors.ContainsKey(Data.StationKey(station))?Foreground(background):Color.FromArgb(82,96,109),flags);
         return width;
     }
 }

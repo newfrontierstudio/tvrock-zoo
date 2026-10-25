@@ -30,7 +30,7 @@ internal sealed partial class MainForm
     DateTimeOffset _nextReservationBoundary=DateTimeOffset.MaxValue;
     DateTimeOffset _nextGuideAttempt = DateTimeOffset.Now.AddSeconds(45);
     static readonly JsonSerializerOptions NativeJson = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, WriteIndented = true };
-    internal sealed record KeywordEntry(int Order,string Id,bool Enabled,string Title,string Detail,string Stations,string Days,string Hours);
+    internal sealed record KeywordEntry(int Order,string Id,bool Enabled,string Title,string Detail,string Stations,string Days,string Hours,Dictionary<string,string>? Fields=null);
     internal sealed record AiEntry(string ReservationId,string ProgramTitle,string SearchWord,string Reason,DateTimeOffset Start,string Station,string Source="local");
     sealed record GuideCache(DateTimeOffset Fetched,List<Show> Shows);
     static DataGridView NativeGrid() => new StableGrid() { Dock=DockStyle.Fill, ReadOnly=true, AllowUserToAddRows=false, AllowUserToDeleteRows=false, RowHeadersVisible=false, AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.None, SelectionMode=DataGridViewSelectionMode.FullRowSelect, MultiSelect=false, BackgroundColor=Color.White, BorderStyle=BorderStyle.None, AutoGenerateColumns=false, AllowUserToResizeRows=false, ColumnHeadersHeight=32, ColumnHeadersHeightSizeMode=DataGridViewColumnHeadersHeightSizeMode.DisableResizing, RowTemplate={Height=29}, ShowCellToolTips=true };
@@ -70,7 +70,7 @@ internal sealed partial class MainForm
         var keySearch=new Button{Text="検索ワードで探す",AutoSize=true};keySearch.Click+=(_,_)=>SearchNativeKeyword();
         var keyEdit=new Button{Text="条件を編集",AutoSize=true};keyEdit.Click+=async(_,_)=>{if(_nativeKeywords.CurrentRow?.Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
         InitializeConsult(keybar);keybar.Controls.AddRange([keySearch,keyEdit]); keysPage.Controls.Add(_nativeKeywords);keysPage.Controls.Add(keybar);
-        Col(_nativeKeywords,"order","順",55);Col(_nativeKeywords,"enabled","状態",65);Col(_nativeKeywords,"title","検索ワード",330);Col(_nativeKeywords,"detail","詳細条件",220);Col(_nativeKeywords,"station","局",180);Col(_nativeKeywords,"days","曜日",130);Col(_nativeKeywords,"hours","時間",100);Col(_nativeKeywords,"candidates","取得済み番組表内の候補",340,true);
+        Col(_nativeKeywords,"order","優先度",75);Col(_nativeKeywords,"enabled","状態",65);Col(_nativeKeywords,"title","検索ワード",330);Col(_nativeKeywords,"detail","詳細条件",220);Col(_nativeKeywords,"station","局",180);Col(_nativeKeywords,"days","曜日",130);Col(_nativeKeywords,"hours","時間",100);Col(_nativeKeywords,"candidates","取得済み番組表内の候補",340,true);
         _nativeKeywords.CellDoubleClick+=async(_,e)=>{if(e.RowIndex>=0&&_nativeKeywords.Rows[e.RowIndex].Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
         foreach(var g in new[]{_nativeReservations,_nativeGuide,_nativeKeywords}) { g.DefaultCellStyle.Font=new Font("Meiryo UI",10);g.AlternatingRowsDefaultCellStyle.BackColor=Color.FromArgb(243,247,252);g.ColumnHeaderMouseClick+=(_,e)=>SortNativeGrid(g,e.ColumnIndex); }
         InitializeReadableDesign(toolbar);
@@ -105,8 +105,12 @@ internal sealed partial class MainForm
     void LoadNativeData()
     {
         try {
+            using var redraw=((StableGrid)_nativeKeywords).Freeze();
+            var prior=_nativeKeywords.Rows.Cast<DataGridViewRow>().Where(r=>r.Tag is KeywordEntry).GroupBy(r=>((KeywordEntry)r.Tag!).Id).ToDictionary(g=>g.Key,g=>(g.First().Cells["candidates"].Value,g.First().Cells["candidates"].ToolTipText));
+            var known=Data.Tuners(Path.Combine(RockFolder,"dtv.ini")).Stations.Values.Where(n=>n.Length>0).Distinct().ToArray();
             _nativeKeys=ReadKeywords(Path.Combine(RockFolder,"tvrock.key"));_nativeKeywords.Rows.Clear();
-            foreach(var k in _nativeKeys){int i=_nativeKeywords.Rows.Add(k.Order,k.Enabled?"有効":"無効",k.Title,k.Detail,k.Stations.Split(" / ").Length>=6?"全局":k.Stations,k.Days.Length>=5?"毎日":k.Days,k.Hours);_nativeKeywords.Rows[i].Tag=k;_nativeKeywords.Rows[i].Cells[4].ToolTipText=k.Stations;_nativeKeywords.Rows[i].Cells[5].ToolTipText=k.Days;_nativeKeywords.Rows[i].Cells[4].Style.ForeColor=StationColor(k.Stations);}
+            foreach(var k in _nativeKeys){var targets=k.Stations.Length==0?known:k.Stations.Split(" / ",StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries).Distinct().ToArray();int i=_nativeKeywords.Rows.Add(k.Order,k.Enabled?"有効":"無効",k.Title,k.Detail,targets.Length==1?targets[0]:targets.Length+"局",k.Days.Length>=5?"毎日":k.Days,k.Hours);var row=_nativeKeywords.Rows[i];row.Tag=k;if(prior.TryGetValue(k.Id,out var saved)){row.Cells["candidates"].Value=saved.Value;row.Cells["candidates"].ToolTipText=saved.ToolTipText;}row.Cells[4].ToolTipText=string.Join(" / ",targets);row.Cells[5].ToolTipText=k.Days;row.Cells[4].Style.ForeColor=StationColor(k.Stations);}
+            _nativeKeywords.CurrentCell=null;_nativeKeywords.ClearSelection();
             LoadNativeReservations();LoadNativeGuideCache();
         } catch(Exception e){_engineStatus.Text="読み込み失敗: "+e.Message;}
     }

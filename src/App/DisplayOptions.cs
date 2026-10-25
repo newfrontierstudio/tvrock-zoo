@@ -10,11 +10,12 @@ internal sealed class DisplayOptions
     public bool GuideDetailsPopup {get;set;}=true;
     public int PaletteRevision {get;set;}
     public Dictionary<string,int> StationColors {get;set;}=[];
+    public HashSet<string> ExactStationColors {get;set;}=[];
     internal static string? TestPath;
     static string PathName=>TestPath??Path.Combine(ConnectionProfiles.Current.Active.Home,"display-options.json");
     static DisplayOptions? current;
     internal static DisplayOptions Current=>current??=Read();
-    static DisplayOptions Read(){try{var value=File.Exists(PathName)?JsonSerializer.Deserialize<DisplayOptions>(File.ReadAllText(PathName))??new():new();value.StationColors??=[];if(value.PaletteRevision<1){if(value.StationColors.TryGetValue("日本テレビ",out int old)){var c=Color.FromArgb(old);if(c.R>c.G&&c.R>c.B)value.StationColors.Remove("日本テレビ");}value.PaletteRevision=1;}return value;}catch{return new();}}
+    static DisplayOptions Read(){try{var value=File.Exists(PathName)?JsonSerializer.Deserialize<DisplayOptions>(File.ReadAllText(PathName))??new():new();value.StationColors??=[];value.ExactStationColors??=[];if(value.PaletteRevision<1){if(value.StationColors.TryGetValue("日本テレビ",out int old)){var c=Color.FromArgb(old);if(c.R>c.G&&c.R>c.B)value.StationColors.Remove("日本テレビ");}value.PaletteRevision=1;}return value;}catch{return new();}}
     internal void Save(){Directory.CreateDirectory(Path.GetDirectoryName(PathName)!);File.WriteAllText(PathName+".tmp",JsonSerializer.Serialize(this));File.Move(PathName+".tmp",PathName,true);}
 }
 internal sealed partial class MainForm
@@ -38,7 +39,7 @@ internal sealed partial class MainForm
 
         InitializeKeywordFilenameOptions(DetailSection(body,"録画ファイル名","TVRockの録画ファイル名に付ける検索ワードを設定します。"));
         InitializeDiagnosticLogging(DetailSection(body,"診断","問題を調べるためのログ設定です。"));
-        InitializeStationColorEditor(appearance);InitializeGestureOptions(appearance);InitializeUpdateNotifications(DetailSection(body,"アップデート","更新通知は初期OFFです。"));StyleControls(body);_detailLanding.SizeChanged+=(_,_)=>FitDetailIndex();FitDetailIndex();
+        InitializeStationColorEditor(appearance);InitializeGestureOptions(appearance);InitializeUpdateNotifications(DetailSection(body,"アップデート","更新通知は初期OFFです。"));StyleControls(body);_detailLanding.SizeChanged+=(_,_)=>FitDetailIndex();FitDetailIndex();BuildModernDetails(body);
         ApplyDisplayOptions();
     }
 }

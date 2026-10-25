@@ -19,8 +19,8 @@ internal static class SelectionDeselectionTests
         try{
             grid.CurrentCell=grid.Rows[0].Cells[0];grid.Rows[0].Selected=true;
             using var host=new Form{ClientSize=new Size(320,220),ShowInTaskbar=false};host.Controls.Add(grid);host.Show();Application.DoEvents();var cell=grid.GetCellDisplayRectangle(0,0,false);
-            if(!MainForm.IsSelectionBlank(grid,new Point(10,grid.ClientSize.Height-5))||MainForm.IsSelectionBlank(grid,new Point(cell.Left+cell.Width/2,cell.Top+cell.Height/2)))throw new Exception($"Only grid background should deselect: size={grid.ClientSize}, cell={cell}, bottom={grid.HitTest(10,grid.ClientSize.Height-5).Type}, row={grid.HitTest(cell.Left+cell.Width/2,cell.Top+cell.Height/2).Type}");
-            if(!MainForm.IsSelectionBlank(blank,Point.Empty)||MainForm.IsSelectionBlank(button,Point.Empty)||MainForm.IsSelectionBlank(input,Point.Empty)||MainForm.IsSelectionBlank(options,new Point(10,100)))throw new Exception("Buttons, text input and checked settings must preserve selection");
+            if(MainForm.IsSelectionBlank(grid,new Point(10,grid.ClientSize.Height-5))||MainForm.IsSelectionBlank(grid,new Point(cell.Left+cell.Width/2,cell.Top+cell.Height/2)))throw new Exception($"Only grid background should deselect: size={grid.ClientSize}, cell={cell}, bottom={grid.HitTest(10,grid.ClientSize.Height-5).Type}, row={grid.HitTest(cell.Left+cell.Width/2,cell.Top+cell.Height/2).Type}");
+            if(MainForm.IsSelectionBlank(blank,Point.Empty)||MainForm.IsSelectionBlank(button,Point.Empty)||MainForm.IsSelectionBlank(input,Point.Empty)||MainForm.IsSelectionBlank(options,new Point(10,100)))throw new Exception("Buttons, text input and checked settings must preserve selection");
             using var card=new Panel{Tag=(new RecordedFile("synthetic.ts","file",DateTime.Today,1,false),new CheckBox())};
             if(MainForm.IsSelectionBlank(card,Point.Empty))throw new Exception("A media card is a selectable item, not blank space");
             host.Controls.Remove(grid);page.Controls.Add(grid);host.Hide();

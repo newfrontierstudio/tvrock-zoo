@@ -33,7 +33,7 @@ internal sealed class RecordedMediaView:UserControl
     readonly Func<string> folder,home;
     readonly Label pathLabel=new(){AutoSize=true},status=new(){AutoSize=true},progress=new(){AutoSize=true};
     readonly ComboBox sort=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=85},direction=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=75},bitrate=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=90},encoder=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=210};
-    readonly FlowLayoutPanel list=new(){Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,BackColor=Color.White};
+    readonly ChromeMediaList list=new(){Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,BackColor=Color.White};
     readonly Button convert=Button("選択した録画を変換"),cancel=Button("変換を中止"),more=Button("さらに表示");
     readonly HashSet<string> selected=new(StringComparer.OrdinalIgnoreCase);
     readonly List<RecordedQueueItem> jobs=[];List<RecordedFile> files=[];
@@ -44,10 +44,10 @@ internal sealed class RecordedMediaView:UserControl
     void FileProgress(string path,string text){progressText[path]=text;if(fileProgress.TryGetValue(path,out var label)&&!label.IsDisposed)label.Text=text;}
     readonly RecordedMediaPlayback playback=new();readonly System.Windows.Forms.Timer debounce=new(){Interval=900},poll=new(){Interval=10000};
     readonly SemaphoreSlim imageGate=new(2);readonly CancellationTokenSource lifetime=new();CancellationTokenSource? rendering,batch;
-    FileSystemWatcher? watcher;string watched="",signature="";bool active,loading,reloading,again,encodersLoaded;int shown;string? selectionAnchor;bool syncingSelection;Action? resetPreview;string playingFile="";
+    FileSystemWatcher? watcher;string watched="",signature="";bool active,loading,reloading,again,encodersLoaded,resetListScroll;int shown;string? selectionAnchor;bool syncingSelection;Action? resetPreview;string playingFile="";
     internal RecordedMediaView(Func<string> folder,Func<string> home,bool allowChoose=true)
     {
-        this.folder=folder;this.home=home;BackColor=Color.White;Font=new Font("Meiryo UI",10);
+        this.folder=folder;this.home=home;DoubleBuffered=true;BackColor=Color.White;Font=new Font("Meiryo UI",10);
         foreach(var box in new[]{sort,direction,bitrate,encoder}){box.DrawMode=DrawMode.OwnerDrawFixed;box.DrawItem+=(_,e)=>{e.DrawBackground();string text=e.Index>=0?box.Items[e.Index]?.ToString()??"":box.Text;TextRenderer.DrawText(e.Graphics,text,box.Font,e.Bounds,box.ForeColor,TextFormatFlags.Left|TextFormatFlags.VerticalCenter|TextFormatFlags.SingleLine);e.DrawFocusRectangle();};}
         sort.Items.AddRange(["日付","名前","サイズ"]);sort.SelectedIndex=0;direction.Items.AddRange(["降順","昇順"]);direction.SelectedIndex=0;bitrate.Items.AddRange(["自動","2 Mbps","4 Mbps","6 Mbps","8 Mbps","12 Mbps","16 Mbps"]);bitrate.SelectedIndex=3;
         var top=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(10),WrapContents=true};Button selectAll=Button("全選択"),refresh=Button("一覧を更新"),choose=Button("フォルダーを選ぶ"),addTools=Button("再生・変換の部品を追加");
@@ -56,21 +56,21 @@ internal sealed class RecordedMediaView:UserControl
         var bottom=new FlowLayoutPanel{Dock=DockStyle.Bottom,AutoSize=true,Padding=new Padding(10),FlowDirection=FlowDirection.TopDown,WrapContents=false};
         bottom.Controls.Add(Label("MP4（AV1）バッチ変換"));var actions=new FlowLayoutPanel{AutoSize=true,WrapContents=true,MaximumSize=new Size(1200,0)};actions.Controls.AddRange([Label("ビットレート（一括）"),bitrate,encoder,convert,cancel]);bottom.Controls.Add(actions);
         bottom.Controls.Add(Label("元のサイズ・FPSを維持 ／ 元TSは残す ／ 音声AAC・放送字幕とデータ放送は変換対象外"));var totals=new FlowLayoutPanel{AutoSize=true,WrapContents=true};totals.Controls.AddRange([progress,totalRemaining]);bottom.Controls.Add(totals);cancel.Enabled=false;
-        Controls.Add(list);Controls.Add(bottom);Controls.Add(top);
+        Controls.Add(list.CreateFrame());Controls.Add(bottom);Controls.Add(top);
         SizeChanged+=(_,_)=>{actions.MaximumSize=new Size(Math.Max(300,ClientSize.Width-30),0);};
         sort.SelectedIndexChanged+=(_,_)=>Rebuild();direction.SelectedIndexChanged+=(_,_)=>Rebuild();selectAll.Click+=(_,_)=>{var eligible=files.Where(f=>!f.Recording&&f.Bytes>0).ToArray();if(eligible.All(f=>selected.Contains(f.Path)))selected.Clear();else foreach(var f in eligible)selected.Add(f.Path);SyncSelection();};
         refresh.Click+=async(_,_)=>await Reload(true);choose.Click+=async(_,_)=>{using var dialog=new FolderBrowserDialog{InitialDirectory=folder()};if(dialog.ShowDialog(this)!=DialogResult.OK)return;Directory.CreateDirectory(home());File.WriteAllText(Path.Combine(home(),"recorded-folder.txt"),dialog.SelectedPath);localFolder=dialog.SelectedPath;await Reload(true);};
         addTools.Click+=async(_,_)=>{using var dialog=new FolderBrowserDialog{Description="動画追加パックのToolsフォルダーを選んでください"};if(dialog.ShowDialog(this)!=DialogResult.OK)return;addTools.Enabled=false;try{await Task.Run(()=>MediaToolsSupport.Install(dialog.SelectedPath));encodersLoaded=true;await LoadEncoders();await Reload(true);progress.Text="再生・変換の部品を追加しました。";}catch(Exception error){progress.Text=error.Message;}finally{if(!addTools.IsDisposed)addTools.Enabled=true;}};
         convert.Click+=async(_,_)=>await StartBatch();cancel.Click+=(_,_)=>batch?.Cancel();
         debounce.Tick+=async(_,_)=>{debounce.Stop();await Reload(false);};poll.Tick+=async(_,_)=>{if(active)await Reload(false);};
-        list.Resize+=(_,_)=>{foreach(Control card in list.Controls)card.Width=Math.Max(320,list.ClientSize.Width-25);};list.Scroll+=(_,_)=>{if(shown<files.Count&&-list.AutoScrollPosition.Y+list.ClientSize.Height>=list.DisplayRectangle.Height-300)AppendPage();};more.Click+=(_,_)=>AppendPage();
+        list.Resize+=(_,_)=>{foreach(Control card in list.Controls)card.Width=Math.Max(1,list.ClientSize.Width-2);};list.Scroll+=(_,_)=>{if(shown<files.Count&&-list.AutoScrollPosition.Y+list.ClientSize.Height>=list.DisplayRectangle.Height-300)AppendPage();};more.Click+=(_,_)=>AppendPage();
         Disposed+=(_,_)=>{lifetime.Cancel();rendering?.Cancel();batch?.Cancel();watcher?.Dispose();debounce.Dispose();poll.Dispose();playback.Dispose();};
     }
     string? localFolder;
     static Button Button(string text)=>new(){Text=text,AutoSize=true,FlatStyle=FlatStyle.Flat,BackColor=Color.FromArgb(237,247,248),Padding=new Padding(5,2,5,2),Margin=new Padding(4)};
     static Label Label(string text)=>new(){Text=text,AutoSize=true,Margin=new Padding(4,8,4,4)};
-    internal void ActivateLibrary(){if(IsDisposed)return;active=true;poll.Start();_ = Reload(true);if(!encodersLoaded){encodersLoaded=true;_ = LoadEncoders();}}
-    internal void StopPlayback(){active=false;poll.Stop();debounce.Stop();rendering?.Cancel();playback.Stop();resetPreview?.Invoke();resetPreview=null;playingFile="";}
+    internal void ActivateLibrary(){if(IsDisposed||active)return;active=true;poll.Start();_ = Reload(false);if(!encodersLoaded){encodersLoaded=true;_ = LoadEncoders();}}
+    internal void StopPlayback(){active=false;poll.Stop();debounce.Stop();playback.Stop();resetPreview?.Invoke();resetPreview=null;playingFile="";}
     async Task LoadEncoders(){if(!MediaToolsSupport.Ready){progress.Text="再生・変換には動画追加パックが必要です。「再生・変換の部品を追加」から設定してください。";return;}try{var encoders=await RecordedMediaEngine.Encoders(lifetime.Token);if(IsDisposed)return;encoder.Items.Clear();foreach(var item in encoders)encoder.Items.Add(item);encoder.SelectedIndex=0;SelectionStatus();}catch(Exception e)when(e is not OutOfMemoryException){if(!IsDisposed)progress.Text=e.Message;}}
     async Task Reload(bool force)
     {
@@ -80,6 +80,7 @@ internal sealed class RecordedMediaView:UserControl
             string current=Path.GetFullPath(localFolder??folder());pathLabel.Text=current;
             if(watched!=current)
             {
+                resetListScroll=true;
                 watcher?.Dispose();watcher=null;watched=current;
                 if(Directory.Exists(current)){watcher=new FileSystemWatcher(current){NotifyFilter=NotifyFilters.FileName,SynchronizingObject=this};FileSystemEventHandler changed=(_,_)=>{if(IsDisposed||!active)return;debounce.Stop();debounce.Start();};watcher.Created+=changed;watcher.Deleted+=changed;watcher.Renamed+=(_,_)=>{if(!IsDisposed&&active){debounce.Stop();debounce.Start();}};watcher.Error+=(_,_)=>{if(!IsDisposed&&active){debounce.Stop();debounce.Start();}};watcher.EnableRaisingEvents=true;}
             }
@@ -92,14 +93,14 @@ internal sealed class RecordedMediaView:UserControl
     }
     void Rebuild()
     {
-        if(loading||IsDisposed)return;loading=true;
+        if(loading||IsDisposed)return;int scroll=resetListScroll?0:list.Offset;int oldShown=resetListScroll?12:Math.Max(12,shown);resetListScroll=false;loading=true;list.SuspendLayout();
         try
         {
             playback.Stop();resetPreview?.Invoke();resetPreview=null;playingFile="";rendering?.Cancel();rendering?.Dispose();rendering=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
             foreach(Control child in list.Controls.Cast<Control>().ToArray())if(child!=more)child.Dispose();list.Controls.Clear();fileProgress.Clear();shown=0;
-            files=RecordedMediaEngine.Sort(files,sort.Text,direction.Text=="降順");AppendPage();SelectionStatus();
+            files=RecordedMediaEngine.Sort(files,sort.Text,direction.Text=="降順");AppendPage();while(shown<Math.Min(oldShown,files.Count))AppendPage();SelectionStatus();
         }
-        finally{loading=false;}
+        finally{list.ResumeLayout(true);list.SetOffset(scroll,false);loading=false;}
     }
     void AppendPage()
     {
@@ -134,7 +135,7 @@ internal sealed class RecordedMediaView:UserControl
     }
     Control Card(RecordedFile file,CancellationToken ct)
     {
-        var card=new Panel{Width=Math.Max(320,list.ClientSize.Width-25),Height=300,Margin=new Padding(0,0,0,8),BackColor=selected.Contains(file.Path)?Color.FromArgb(237,247,248):Color.White};
+        var card=new Panel{TabStop=false,Width=Math.Max(1,list.ClientSize.Width-2),Height=300,Margin=new Padding(0,0,0,8),BackColor=selected.Contains(file.Path)?Color.FromArgb(237,247,248):Color.White};
         var check=new CheckBox{Location=new Point(9,8),Size=new Size(24,24),Checked=selected.Contains(file.Path),Enabled=!file.Recording&&file.Bytes>0};
         var titleFont=new Font(Font,FontStyle.Bold);
         var title=new Label{Font=titleFont,Text=(file.Station.Length>0?file.Station+"　":"")+file.Name,Location=new Point(40,8),Height=43,Width=card.Width-50,AutoEllipsis=true,Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right};card.Controls.AddRange([check,title]);card.Tag=(file,check);
@@ -148,7 +149,7 @@ internal sealed class RecordedMediaView:UserControl
         play.Click+=async(_,_)=>{try{if(play.Tag is true&&playingFile==file.Path&&playback.Pid!=null){await playback.Command("cycle","pause");play.Text=play.Text=="Ⅱ"?"▶":"Ⅱ";return;}resetPreview?.Invoke();playback.Start(file.Path,videoHost);int started=playback.Pid!.Value;playingFile=file.Path;resetPreview=()=>{if(!play.IsDisposed){play.Tag=false;play.Text="▶";image.Visible=true;image.BringToFront();}};play.Tag=true;play.Text="Ⅱ";image.Visible=true;image.BringToFront();bool ready=await playback.WaitForVideo(started,ct);if(play.IsDisposed||playingFile!=file.Path||playback.Pid!=started)return;if(!ready){playback.Stop();resetPreview?.Invoke();progress.Text="プレビューを開始できませんでした。";return;}image.Visible=false;await playback.Command("set_property","pause",false);}catch(OperationCanceledException){}catch(Exception e)when(e is not OutOfMemoryException){if(!IsDisposed){resetPreview?.Invoke();progress.Text=e.Message;}}};
         stop.Click+=(_,_)=>{playback.Stop();play.Tag=false;play.Text="▶";image.Visible=true;};seek.MouseUp+=async(_,_)=>{if(play.Tag is true&&duration>0)await playback.Command("seek",duration*seek.Value/1000,"absolute");};volume.ValueChanged+=async(_,_)=>{if(play.Tag is true)await playback.Command("set_property","volume",volume.Value);};
         check.CheckedChanged+=(_,_)=>{if(syncingSelection)return;SelectFile(file,ModifierKeys,check.Checked);};
-        foreach(Control target in new Control[]{card,title,image,details})target.MouseDown+=(_,e)=>{if(e.Button==MouseButtons.Left&&check.Enabled)SelectFile(file,ModifierKeys,null);};
+        foreach(Control target in new Control[]{card,title,image,details,conversion})target.MouseDown+=(_,e)=>{if(e.Button==MouseButtons.Left&&check.Enabled)SelectFile(file,ModifierKeys,null);};
         void LayoutCard(){bool compact=card.Width<800;surface.Top=54;details.Location=compact?new Point(40,290):new Point(375,54);details.Size=new Size(compact?Math.Max(260,card.Width-50):220,150);inferno.Location=compact?new Point(40,445):new Point(610,54);conversion.Location=compact?new Point(40,495):new Point(610,104);conversion.Size=new Size(compact?Math.Max(260,card.Width-50):Math.Max(150,card.Width-625),120);card.Height=compact?630:300;}
         card.Resize+=(_,_)=>LayoutCard();LayoutCard();
         card.Disposed+=(_,_)=>{image.Image?.Dispose();titleFont.Dispose();};

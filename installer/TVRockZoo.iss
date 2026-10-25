@@ -1,7 +1,10 @@
+#ifndef BuildRoot
+#define BuildRoot "..\artifacts"
+#endif
 [Setup]
 AppId={{632AF8C7-589A-433F-93CF-5AF286F6DFE6}
 AppName=TVRock Zoo
-AppVersion=1.1.3
+AppVersion=1.2.0
 AppPublisher=newfrontierstudio
 AppPublisherURL=https://github.com/newfrontierstudio/tvrock-zoo
 DefaultDirName={localappdata}\Programs\TVRockZoo
@@ -10,8 +13,8 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
-OutputDir=..\artifacts
-OutputBaseFilename=TVRockZoo-1.1.3-Setup-x64
+OutputDir={#BuildRoot}
+OutputBaseFilename=TVRockZoo-1.2.0-Setup-x64
 SetupIconFile=..\src\App\app.ico
 Uninstallable=yes
 CreateUninstallRegKey=yes
@@ -29,7 +32,7 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "desktopicon"; Description: "デスクトップにショートカットを作成"; Flags: unchecked
 
 [Files]
-Source: "..\artifacts\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,MediaTools\*,media-cache\*"
+Source: "{#BuildRoot}\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,MediaTools\*,media-cache\*"
 
 [Icons]
 Name: "{group}\inferno Studio"; Filename: "{app}\inferno.exe"
