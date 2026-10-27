@@ -3,6 +3,7 @@ using TsScheduler;
 using TsRecommend;
 internal static class StudioFeedbackTests {
  internal static void Run(MainForm form){
+  form.Show();form.PerformLayout();Application.DoEvents();
   Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory,"work","zoo120-feedback"));
   if(!Desc(form).OfType<Button>().Any(b=>b.Text=="TVRockの接続設定"&&!b.IsDisposed))throw new Exception("TVRock connection settings disappeared");
   var nav=Desc(form).OfType<ListBox>().FirstOrDefault(b=>b.DrawMode==DrawMode.OwnerDrawFixed);if(nav==null||nav.Items.Count<5)throw new Exception("Modern settings navigation missing");
@@ -10,6 +11,7 @@ internal static class StudioFeedbackTests {
   CheckStationColorDialog(form);
   var flags=BindingFlags.NonPublic|BindingFlags.Instance;var tabs=(TabControl)typeof(MainForm).GetField("_tabs",flags)!.GetValue(form)!;var page=tabs.TabPages.Cast<TabPage>().First(p=>p.Text=="詳細設定");tabs.SelectedTab=page;Application.DoEvents();
   using(var shot=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(shot,new Rectangle(Point.Empty,shot.Size));shot.Save(Path.Combine(Environment.CurrentDirectory,"work","zoo120-feedback","settings.png"));}
+  nav.SelectedItem="TsRename連携";Application.DoEvents();bool inspected=false;Exception? error=null;using(var timer=new System.Windows.Forms.Timer{Interval=100}){timer.Tick+=(_,_)=>{var dialog=Application.OpenForms.Cast<Form>().FirstOrDefault(f=>f.Text=="TsRename連携の確認");if(dialog==null)return;timer.Stop();try{if(!Desc(dialog).OfType<Button>().Any(b=>b.Text=="ChSet3.txtを作成"&&b.Visible))throw new Exception("ChSet3 generator action is missing");using var image=new Bitmap(dialog.Width,dialog.Height);dialog.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(Environment.CurrentDirectory,"work","zoo120-feedback","tsrename.png"));inspected=true;}catch(Exception e){error=e;}finally{dialog.Close();}};timer.Start();typeof(Button).GetMethod("OnClick",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(Desc(form).OfType<Button>().Single(b=>b.Text=="TsRename連携を確認"),[EventArgs.Empty]);}if(error!=null)throw error;if(!inspected)throw new Exception("TsRename dialog was not rendered");
   Console.WriteLine("PASS: Studio feedback - modern settings retains TVRock connection; exact live color preview, Cancel restoration and Apply persistence");
  }
  static IEnumerable<Control> Desc(Control root)=>root.Controls.Cast<Control>().SelectMany(child=>new[]{child}.Concat(Desc(child)));

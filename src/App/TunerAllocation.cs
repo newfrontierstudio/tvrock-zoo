@@ -31,9 +31,11 @@ internal static class TunerAllocation
         for(int changes=0;changes<=tasks.Count;changes++){selected.Clear();if(Solve(0,changes))return new(selected[added.Id],new(selected),tasks.Where(t=>t.Id!=added.Id&&selected[t.Id]!=t.Current).Select(t=>$"{t.Start.ToLocalTime():MM/dd HH:mm} {t.Title}：{label(t.Current)} → {label(selected[t.Id])}").ToArray());if(steps>200000)return null;}
         return null;
     }
-    internal static AllocationChoice? Choose(IWin32Window owner,AllocationTask added,List<AllocationTask> existing,Func<int,string> label)
+    internal static AllocationChoice? Choose(IWin32Window owner,AllocationTask added,List<AllocationTask> existing,Func<int,string> label,bool manual=true)
     {
-        var free=Free(added,existing);using var dialog=new Form{Text="おすすめの空き録画チャンネル",Font=new Font("Meiryo UI",10),ClientSize=new Size(600,370),StartPosition=FormStartPosition.CenterParent,MinimumSize=new Size(550,330)};
+        var free=Free(added,existing);
+        if(!manual&&free.Count>0)return new(free[0],new(){{added.Id,free[0]}},[]);
+        using var dialog=new Form{Text="おすすめの空き録画チャンネル",Font=new Font("Meiryo UI",10),ClientSize=new Size(600,370),StartPosition=FormStartPosition.CenterParent,MinimumSize=new Size(550,330)};
         var text=new Label{Dock=DockStyle.Top,Height=75,Padding=new Padding(14),Text=$"{added.Title}\n{added.Start.ToLocalTime():MM/dd HH:mm} ～ {added.End.ToLocalTime():HH:mm}"};
         var list=new ListBox{Dock=DockStyle.Fill,IntegralHeight=false};var buttons=new FlowLayoutPanel{Dock=DockStyle.Bottom,Height=55,Padding=new Padding(10),FlowDirection=FlowDirection.RightToLeft};
         var cancel=new Button{Text="キャンセル",AutoSize=true,DialogResult=DialogResult.Cancel};var confirm=new Button{Text=free.Count>0?"このチューナーで予約":"再配置案を確認",AutoSize=true,Enabled=free.Count>0||added.Candidates.Length>0};buttons.Controls.AddRange([cancel,confirm]);dialog.Controls.Add(list);dialog.Controls.Add(text);dialog.Controls.Add(buttons);dialog.CancelButton=cancel;

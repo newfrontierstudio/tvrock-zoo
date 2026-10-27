@@ -17,7 +17,7 @@ internal sealed partial class MainForm
         var active=bookings.Where(b=>b.Enabled).Select(b=>AllocationBooking(b,tuners,DateTimeOffset.Now)).ToList();
         if(TunerAllocation.Connected(added,active).Any(b=>b.Id!="$new"&&!tuners.Any(t=>t.Device==b.Current)))throw new InvalidOperationException("同じ時間帯に割り当てを確認できない予約があります。接続・チューナー設定を確認してください。");
         string Label(int d){int number=deviceIds.FirstOrDefault(p=>p.Value==d).Key;return number>0?$"チューナー {number}":"不明";}
-        return TunerAllocation.Choose(this,added,active,Label);
+        return TunerAllocation.Choose(this,added,active,Label,DisplayOptions.Current.ManualTunerSelection);
     }
         Task ApplyNativeAllocation(AllocationChoice plan,List<Booking> expected)=>ApplyNativeAllocationCore(plan,expected,()=>Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")),NativeGet,folder=>File.Copy(Path.Combine(RockFolder,"tvrock.sch"),Path.Combine(folder,"before.sch")),()=>DateTimeOffset.Now,Path.Combine(RecommendationHome,"allocation-history"));
     internal static async Task ApplyNativeAllocationCore(AllocationChoice plan,List<Booking> expected,Func<List<Booking>> read,Func<string,Task<string>> get,Action<string> backupSource,Func<DateTimeOffset> clock,string history)
