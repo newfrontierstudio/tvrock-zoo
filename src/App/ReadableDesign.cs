@@ -8,7 +8,7 @@ internal sealed partial class MainForm
     readonly Font _hoverKeywordFont = new("Meiryo UI",10.2f,FontStyle.Bold);
     Control? _hoverControl;
     string _hoverText="";
-    Point _hoverPoint;
+    Point _hoverPoint;int _hoverRow=-1,_hoverColumn=-1;
     float _readingSize=10;
     readonly List<Font> _readingFonts=[];
     static readonly Color Ink=Color.FromArgb(23,42,62);
@@ -42,16 +42,18 @@ internal sealed partial class MainForm
             grid.DefaultCellStyle.BackColor=Color.White;grid.AlternatingRowsDefaultCellStyle.BackColor=Color.FromArgb(245,248,252);grid.DefaultCellStyle.ForeColor=Ink;
             grid.DefaultCellStyle.SelectionBackColor=Color.FromArgb(214,232,252);grid.DefaultCellStyle.SelectionForeColor=Color.FromArgb(12,45,81);
             grid.DefaultCellStyle.Padding=new Padding(6,2,6,2);grid.ShowCellToolTips=false;
-            grid.CellMouseEnter+=(_,e)=>{
-                if(e.RowIndex<0||e.ColumnIndex<0)return;var cell=grid.Rows[e.RowIndex].Cells[e.ColumnIndex];
-                string text=GetProgramHoverText(grid,e.RowIndex,e.ColumnIndex);
-                QueueLargeTip(grid,text,grid.PointToClient(Cursor.Position));
+            grid.MouseMove+=(_,e)=>{
+                var hit=grid.HitTest(e.X,e.Y);
+                if(hit.RowIndex<0||hit.ColumnIndex<0||((grid==_nativeReservations||grid==_disabledReservations)&&!ReservationTextHit(grid,hit.RowIndex,hit.ColumnIndex,e.Location))){if(_hoverControl==grid)HideLargeTip();return;}
+                string text=GetProgramHoverText(grid,hit.RowIndex,hit.ColumnIndex);
+                if(_hoverControl==grid&&_hoverRow==hit.RowIndex&&_hoverColumn==hit.ColumnIndex)return;
+                QueueLargeTip(grid,text,e.Location);_hoverRow=hit.RowIndex;_hoverColumn=hit.ColumnIndex;
             };
             grid.CellMouseLeave+=(_,_)=>HideLargeTip();grid.Scroll+=(_,_)=>HideLargeTip();grid.MouseDown+=(_,_)=>HideLargeTip();
         }
         _hoverDelay.Tick+=(_,_)=>{
             _hoverDelay.Stop();if(_hoverControl==null||_hoverText.Length==0)return;
-            var owner=_hoverControl;var text=_hoverText;using var graphics=owner.CreateGraphics();int width=Math.Min((int)(680*DeviceDpi/96f),Screen.FromControl(this).WorkingArea.Width-60);var measured=LayoutHoverText(graphics,text,_hoverFont,_hoverKeywordFont,width-36,PointF.Empty);int actualWidth=Math.Min(width,Math.Max(100,(int)Math.Ceiling(measured.Width)+40));measured=LayoutHoverText(graphics,text,_hoverFont,_hoverKeywordFont,actualWidth-36,PointF.Empty);
+            var owner=_hoverControl;if(owner is DataGridView reservation&&(reservation==_nativeReservations||reservation==_disabledReservations)&&!ReservationTextHit(reservation,_hoverRow,_hoverColumn,reservation.PointToClient(Cursor.Position))){HideLargeTip();return;}var text=_hoverText;using var graphics=owner.CreateGraphics();int width=Math.Min((int)(680*DeviceDpi/96f),Screen.FromControl(this).WorkingArea.Width-60);var measured=LayoutHoverText(graphics,text,_hoverFont,_hoverKeywordFont,width-36,PointF.Empty);int actualWidth=Math.Min(width,Math.Max(100,(int)Math.Ceiling(measured.Width)+40));measured=LayoutHoverText(graphics,text,_hoverFont,_hoverKeywordFont,actualWidth-36,PointF.Empty);
             _largeTip.ShowCard(owner,owner.PointToScreen(new Point(_hoverPoint.X+14,_hoverPoint.Y+26)),new Size(actualWidth,(int)Math.Ceiling(measured.Height)+24),(g,bounds)=>{using var ink=new SolidBrush(Ink);g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;LayoutHoverText(g,text,_hoverFont,_hoverKeywordFont,bounds.Width-36,new PointF(18,10),ink);});
         };
         _tabs.SelectedIndexChanged+=(_,_)=>HideLargeTip();Deactivate+=(_,_)=>HideLargeTip();
@@ -120,6 +122,13 @@ internal sealed partial class MainForm
             return string.Join("\n\n",parts);
         }
         return string.IsNullOrWhiteSpace(row.Cells[columnIndex].ToolTipText)?Convert.ToString(row.Cells[columnIndex].FormattedValue)??"":row.Cells[columnIndex].ToolTipText;
+    }
+    internal static bool ReservationTextHit(DataGridView grid,int row,int column,Point point){
+        if(row<0||column<0||row>=grid.Rows.Count||column>=grid.Columns.Count)return false;
+        var cell=grid.Rows[row].Cells[column];if(string.IsNullOrWhiteSpace(Convert.ToString(cell.FormattedValue)))return false;
+        var bounds=cell.GetContentBounds(row);if(bounds.IsEmpty)return false;
+        var display=grid.GetCellDisplayRectangle(column,row,false);bounds.Offset(display.Location);
+        return Rectangle.Intersect(bounds,grid.GetCellDisplayRectangle(column,row,true)).Contains(point);
     }
     void QueueLargeTip(Control control,string text,Point point){HideLargeTip();if((control==_nativeReservations||control==_disabledReservations)&&!DisplayOptions.Current.ReservationDetailsPopup)return;if((control==_schedule||control==_nativeGuide)&&!DisplayOptions.Current.GuideDetailsPopup)return;_hoverControl=control;_hoverText=text;_hoverPoint=point;if(text.Length>0)_hoverDelay.Start();}
     void HideLargeTip(){_hoverDelay.Stop();_largeTip.HideCard();_hoverControl=null;}

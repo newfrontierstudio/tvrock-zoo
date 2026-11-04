@@ -65,11 +65,18 @@ internal sealed partial class MainForm
             for(int i=0;i<results.Length;i++)
             {
                 if(rows[i].DataGridView!=_nativeKeywords||!ReferenceEquals(rows[i].Tag,results[i].Key))continue;
-                var cell=rows[i].Cells["candidates"];if(!Equals(cell.Value,results[i].Value))cell.Value=results[i].Value;if(cell.ToolTipText!=results[i].Tooltip)cell.ToolTipText=results[i].Tooltip;
+                var cell=rows[i].Cells["candidates"];string warning=KeywordWarning(results[i].Key.Id);string value=warning.Length>0?"要確認："+warning:results[i].Value;string tooltip=warning.Length>0?warning+"\n"+results[i].Tooltip:results[i].Tooltip;if(!Equals(cell.Value,value))cell.Value=value;if(cell.ToolTipText!=tooltip)cell.ToolTipText=tooltip;
             }
         }
         catch(OperationCanceledException){}
         catch(Exception error){if(!IsDisposed&&version==keywordCandidateVersion)_nativeStatus.Text="候補を更新できません："+error.Message;}
         finally{if(ReferenceEquals(keywordCandidateCancellation,cancellation))keywordCandidateCancellation=null;}
+    }
+    string KeywordWarning(string id){
+#if TVROCK_ZOO
+        return "";
+#else
+        return StudioBackend?.KeywordReservationWarning(id)??"";
+#endif
     }
 }

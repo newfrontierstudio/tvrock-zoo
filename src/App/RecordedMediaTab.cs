@@ -31,6 +31,7 @@ internal sealed class RecordedMediaView:UserControl
 {
     internal bool IsConverting=>batch!=null;
     readonly Func<string> folder,home;
+    readonly ToolTip repeatTip=new(){InitialDelay=400,ReshowDelay=100,AutoPopDelay=15000};
     readonly Label pathLabel=new(){AutoSize=true},status=new(){AutoSize=true},progress=new(){AutoSize=true};
     readonly ComboBox sort=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=85},direction=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=75},bitrate=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=90},encoder=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=210};
     readonly ChromeMediaList list=new(){Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,BackColor=Color.White};
@@ -64,7 +65,7 @@ internal sealed class RecordedMediaView:UserControl
         convert.Click+=async(_,_)=>await StartBatch();cancel.Click+=(_,_)=>batch?.Cancel();
         debounce.Tick+=async(_,_)=>{debounce.Stop();await Reload(false);};poll.Tick+=async(_,_)=>{if(active)await Reload(false);};
         list.Resize+=(_,_)=>{foreach(Control card in list.Controls)card.Width=Math.Max(1,list.ClientSize.Width-2);};list.Scroll+=(_,_)=>{if(shown<files.Count&&-list.AutoScrollPosition.Y+list.ClientSize.Height>=list.DisplayRectangle.Height-300)AppendPage();};more.Click+=(_,_)=>AppendPage();
-        Disposed+=(_,_)=>{lifetime.Cancel();rendering?.Cancel();batch?.Cancel();watcher?.Dispose();debounce.Dispose();poll.Dispose();playback.Dispose();};
+        Disposed+=(_,_)=>{lifetime.Cancel();rendering?.Cancel();batch?.Cancel();watcher?.Dispose();repeatTip.Dispose();debounce.Dispose();poll.Dispose();playback.Dispose();};
     }
     string? localFolder;
     static Button Button(string text)=>new(){Text=text,AutoSize=true,FlatStyle=FlatStyle.Flat,BackColor=Color.FromArgb(237,247,248),Padding=new Padding(5,2,5,2),Margin=new Padding(4)};
@@ -140,8 +141,11 @@ internal sealed class RecordedMediaView:UserControl
         var titleFont=new Font(Font,FontStyle.Bold);
         var title=new Label{Font=titleFont,Text=(file.Station.Length>0?file.Station+"　":"")+file.Name,Location=new Point(40,8),Height=43,Width=card.Width-50,AutoEllipsis=true,Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right};card.Controls.AddRange([check,title]);card.Tag=(file,check);
         var surface=new Panel{Location=new Point(40,54),Size=new Size(320,180),BackColor=Color.FromArgb(25,36,44)};var image=new PictureBox{Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=surface.BackColor};var videoHost=new Panel{Dock=DockStyle.Fill,BackColor=surface.BackColor};surface.Controls.Add(videoHost);surface.Controls.Add(image);image.BringToFront();card.Controls.Add(surface);
-        var details=new Label{AutoSize=false,Location=new Point(375,54),Size=new Size(Math.Max(150,card.Width-390),150),Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right,Text=$"{file.Date:yyyy/MM/dd HH:mm}\n{file.Bytes/1073741824d:F2} GB\n{Path.GetExtension(file.Path).TrimStart('.').ToUpperInvariant()}"+(file.Recording?"\n● 録画中（変換対象外）":"")};card.Controls.Add(details);
+        var details=new Label{AutoSize=false,Location=new Point(375,54),Size=new Size(Math.Max(150,card.Width-390),150),Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right,Text=$"{file.Date:yyyy/MM/dd HH:mm}\n容量 {file.Bytes/1073741824d:F2} GB\n{Path.GetExtension(file.Path).TrimStart('.').ToUpperInvariant()}"+(file.Recording?"\n● 録画中（変換対象外）":"")};card.Controls.Add(details);
         var inferno=Button("Inferno");inferno.AccessibleName="Infernoで編集";inferno.Enabled=!file.Recording&&file.Bytes>0;card.Controls.Add(inferno);inferno.Click+=(_,_)=>OpenInferno(file);
+        var repeat=Button(MarkedEpisodes.Contains(home(),file.Path)?"再録画防止 ✓":"再録画を防ぐ");repeat.AccessibleName="同じ回の再録画防止を切り替え";repeat.Enabled=!file.Recording&&file.Bytes>0&&file.Station.Length>0;card.Controls.Add(repeat);
+        repeatTip.SetToolTip(repeat,file.Station.Length==0?"局名を確認できないため、このファイルは指定できません。":"同じ回をZooのおすすめ予約から除外します。詳細設定でON／OFFできます。既存予約やTVRockの検索予約は変更しません。");
+        repeat.Click+=(_,_)=>{try{MarkedEpisodes.Set(home(),new(file.Path,file.Name,file.Station,""),!MarkedEpisodes.Contains(home(),file.Path));repeat.Text=MarkedEpisodes.Contains(home(),file.Path)?"再録画防止 ✓":"再録画を防ぐ";}catch(Exception e){progress.Text=e.Message;}};
         var conversion=new Label{Location=new Point(600,104),Size=new Size(Math.Max(180,card.Width-620),150),Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right,Text=progressText.GetValueOrDefault(file.Path,"")};card.Controls.Add(conversion);fileProgress[file.Path]=conversion;
         Button play=Button("▶"),stop=Button("■");play.AccessibleName="再生・一時停止";stop.AccessibleName="停止";play.Enabled=file.Bytes>0;play.Tag=false;
         play.Paint+=(_,e)=>{e.Graphics.Clear(play.BackColor);int x=(play.ClientSize.Width-12)/2,y=(play.ClientSize.Height-14)/2;using var brush=new SolidBrush(play.ForeColor);if(play.Text=="Ⅱ"){e.Graphics.FillRectangle(brush,x,y,4,14);e.Graphics.FillRectangle(brush,x+8,y,4,14);}else e.Graphics.FillPolygon(brush,new Point[]{new Point(x,y),new Point(x,y+14),new Point(x+12,y+7)});};
@@ -150,7 +154,7 @@ internal sealed class RecordedMediaView:UserControl
         stop.Click+=(_,_)=>{playback.Stop();play.Tag=false;play.Text="▶";image.Visible=true;};seek.MouseUp+=async(_,_)=>{if(play.Tag is true&&duration>0)await playback.Command("seek",duration*seek.Value/1000,"absolute");};volume.ValueChanged+=async(_,_)=>{if(play.Tag is true)await playback.Command("set_property","volume",volume.Value);};
         check.CheckedChanged+=(_,_)=>{if(syncingSelection)return;SelectFile(file,ModifierKeys,check.Checked);};
         foreach(Control target in new Control[]{card,title,image,details,conversion})target.MouseDown+=(_,e)=>{if(e.Button==MouseButtons.Left&&check.Enabled)SelectFile(file,ModifierKeys,null);};
-        void LayoutCard(){bool compact=card.Width<800;surface.Top=54;details.Location=compact?new Point(40,290):new Point(375,54);details.Size=new Size(compact?Math.Max(260,card.Width-50):220,150);inferno.Location=compact?new Point(40,445):new Point(610,54);conversion.Location=compact?new Point(40,495):new Point(610,104);conversion.Size=new Size(compact?Math.Max(260,card.Width-50):Math.Max(150,card.Width-625),120);card.Height=compact?630:300;}
+        void LayoutCard(){bool compact=card.Width<800;surface.Top=54;details.Location=compact?new Point(40,290):new Point(375,54);details.Size=new Size(compact?Math.Max(260,card.Width-50):220,150);inferno.Location=compact?new Point(40,445):new Point(610,54);repeat.Location=compact?new Point(160,445):new Point(610,105);conversion.Location=compact?new Point(40,495):new Point(610,154);conversion.Size=new Size(compact?Math.Max(260,card.Width-50):Math.Max(150,card.Width-625),120);card.Height=compact?630:300;}
         card.Resize+=(_,_)=>LayoutCard();LayoutCard();
         card.Disposed+=(_,_)=>{image.Image?.Dispose();titleFont.Dispose();};
         _ = LoadImage();return card;
@@ -164,7 +168,7 @@ internal sealed class RecordedMediaView:UserControl
                 string? thumbnail=await RecordedMediaEngine.Thumbnail(file,Path.Combine(home(),"media-cache"),ct);var info=await RecordedMediaEngine.Probe(file.Path,ct);duration=info.Duration;
                 if(card.IsDisposed||ct.IsCancellationRequested)return;
                 if(thumbnail!=null){using var source=Image.FromFile(thumbnail);image.Image=new Bitmap(source);}
-                details.Text=$"{file.Date:yyyy/MM/dd HH:mm}\n{TimeSpan.FromSeconds(Math.Round(info.Duration)):g} ／ {file.Bytes/1073741824d:F2} GB\n映像 {info.Width} × {info.Height}\n検索ワード：{(file.SearchWord.Length>0?file.SearchWord:"—")}\n{Path.GetExtension(file.Path).TrimStart('.').ToUpperInvariant()}";
+                details.Text=$"{file.Date:yyyy/MM/dd HH:mm}\n長さ {TimeSpan.FromSeconds(Math.Round(info.Duration)):g}\n容量 {file.Bytes/1073741824d:F2} GB\n映像 {info.Width} × {info.Height}\n検索ワード：{(file.SearchWord.Length>0?file.SearchWord:"—")}\n{Path.GetExtension(file.Path).TrimStart('.').ToUpperInvariant()}";
             }
             catch(OperationCanceledException){}catch(Exception e)when(e is not OutOfMemoryException){if(!details.IsDisposed)details.Text+="\nプレビュー未取得";}
             finally{if(entered)imageGate.Release();}

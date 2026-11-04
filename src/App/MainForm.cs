@@ -99,11 +99,11 @@ internal sealed partial class MainForm : Form
     private static string RecommendationHome => ConnectionProfiles.Current.Active.Home;
     private void InitializeRecommendations()
     {
-        RecommendationSwitch.Save(RecommendationHome,true);
+
         var menu = new ContextMenuStrip();
         var enabled = new ToolStripMenuItem("3日ごとの自動おすすめ予約") { CheckOnClick = true, Checked = !File.Exists(Path.Combine(RecommendationHome, "recommend-disabled.txt")) };
         _recommendToggle.Checked = enabled.Checked;
-        void ShowMode() { _recommendToggle.Text = "自動おすすめ予約 " + (enabled.Checked ? "ON" : "OFF"); _recommendToggle.BackColor = enabled.Checked ? Color.FromArgb(218,238,228) : Color.FromArgb(231,238,247); _recommendToggle.FlatAppearance.CheckedBackColor=_recommendToggle.BackColor;_recommend.BackColor=_recommendToggle.BackColor;_recommend.ForeColor=Ink;_recommendTip.SetToolTip(_recommendToggle,"検索条件・予約履歴からPC内で選定し、3日ごとに最大20件を予約。OFFでも既存の予約は残ります。ChatGPTの設定ではありません。"); }
+        void ShowMode() { _recommendToggle.Text = "自動おすすめ予約 " + (enabled.Checked ? "ON" : "OFF"); _recommendToggle.BackColor = enabled.Checked ? Color.FromArgb(218,238,228) : Color.FromArgb(231,238,247); _recommendToggle.FlatAppearance.CheckedBackColor=_recommendToggle.BackColor;_recommend.BackColor=_recommendToggle.BackColor;_recommend.ForeColor=Ink;_recommendTip.SetToolTip(_recommendToggle,$"検索条件・予約履歴からPC内で選定し、{RecommendationSummary()}を予約。OFFでも既存の予約は残ります。ChatGPTの設定ではありません。"); }
         bool restoringMode = false;
         enabled.CheckedChanged += (_, _) => { if(restoringMode) return; try { RecommendationSwitch.Save(RecommendationHome,enabled.Checked); } catch(Exception error) { MessageBox.Show(this,error.Message,"おすすめ設定を保存できません"); restoringMode = true; enabled.Checked = !enabled.Checked; _recommendToggle.Checked = enabled.Checked; restoringMode = false; return; } _recommendToggle.Checked = enabled.Checked; ShowMode(); };
         _recommendToggle.CheckedChanged += (_, _) => { if(enabled.Checked != _recommendToggle.Checked) enabled.Checked = _recommendToggle.Checked; };
@@ -123,12 +123,12 @@ internal sealed partial class MainForm : Form
         try
         {
             var file = Path.Combine(RecommendationHome,"recommend-status.json");
-            if (!File.Exists(file)) { _recommendTip.SetToolTip(_recommend,"検索条件・予約履歴からPC内で選定。3日ごとに最大20件。右クリックで自動予約を停止できます。"); return; }
+            if (!File.Exists(file)) { _recommendTip.SetToolTip(_recommend,$"検索条件・予約履歴からPC内で選定。{RecommendationSummary()}。右クリックで自動予約を停止できます。"); return; }
             using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
             var root = doc.RootElement;
             var message = root.GetProperty("message").GetString() ?? "";
             var stamp = root.GetProperty("time").GetString() ?? "";
-            _recommendTip.SetToolTip(_recommend,message+"\n3日ごとに最大20件。右クリックで履歴と自動実行の設定。");
+            _recommendTip.SetToolTip(_recommend,message+$"\n{RecommendationSummary()}。右クリックで履歴と自動実行の設定。");
             if(stamp!=_lastRecommendationStamp && root.GetProperty("state").GetString()=="complete")
             { if(_webBrowser.Source?.AbsolutePath==new Uri(ConnectionProfiles.Current.Active.BaseUri,"list").AbsolutePath) _webBrowser.CoreWebView2?.Reload(); }
             if(stamp!=_lastRecommendationStamp) LoadNativeReservations();

@@ -4,10 +4,14 @@ namespace TsScheduler;
 
 internal static class StationBadgeRenderer
 {
+    internal static string NameKey(string station){if(System.Text.RegularExpressions.Regex.IsMatch(Data.Clean(station).Replace(" ",""),@"^(?:TOKYOMX|MX)[23]$"))return Data.StationKey(station);if(Data.Clean(station).Replace(" ","").StartsWith("NHK総合"))return "NHK";if(Data.Clean(station).Replace(" ","").StartsWith("NHKEテレ"))return "Eテレ";foreach(var standard in new[]{"NHK","日テレ","テレ朝","TBS","テレ東","フジ","Eテレ","MX"})if(Data.SameStation(station,standard))return Data.StationKey(standard);return Data.StationKey(station);}
+    internal static string Alias(string station)=>DisplayOptions.Current.StationNames.GetValueOrDefault(NameKey(station),DisplayOptions.Current.StationNames.GetValueOrDefault(Data.StationKey(station),""));
+    internal static void SetAlias(string station,string value){var options=DisplayOptions.Current;string key=NameKey(station);var previous=new Dictionary<string,string>(options.StationNames);try{foreach(var old in options.StationNames.Keys.Where(k=>NameKey(k)==key).ToArray())options.StationNames.Remove(old);string text=value.Trim();if(text.Length>40||text.Any(char.IsControl))throw new InvalidDataException("表示名は40文字以内で入力してください。");if(text.Length>0)options.StationNames[key]=text;options.Save();}catch{options.StationNames=previous;throw;}}
+    internal static string DisplayName(string station){var names=DisplayOptions.Current.StationNames;string key=Data.StationKey(station);if(names.TryGetValue(key,out var exact)&&!string.IsNullOrWhiteSpace(exact))return exact;foreach(var pair in names)if(!string.IsNullOrWhiteSpace(pair.Value)&&(NameKey(station)==NameKey(pair.Key)))return pair.Value;return station=="MX1"?"MX":station;}
     internal static Color Background(string station)
     {
         string key=Data.StationKey(station);
-        if(DisplayOptions.Current.StationColors.TryGetValue(key,out int custom))return Color.FromArgb(255,Color.FromArgb(custom));
+        if(DisplayOptions.Current.StationColors.TryGetValue(key,out int custom))return DisplayOptions.Current.ExactStationColors.Contains(key)?Color.FromArgb(255,Color.FromArgb(custom)):IncreaseChroma(Color.FromArgb(255,Color.FromArgb(custom)),1.07);
         double hue=key switch{"NHK"=>245,"日本テレビ"=>200,"テレビ朝日"=>300,"TBS"=>270,"テレビ東京"=>180,"フジテレビ"=>105,"Eテレ"=>140,"TOKYOMX"=>230,_=>-1};
         if(hue<0)return Color.FromArgb(239,241,243);
         double angle=hue*Math.PI/180,chroma=key is "NHK" or "フジテレビ"?3:5,fy=112d/116;
@@ -34,7 +38,7 @@ internal static class StationBadgeRenderer
     }
     internal static int Draw(Graphics graphics,string station,Font font,Rectangle bounds,bool disabled=false,bool centered=false)
     {
-        string label=station=="MX1"?"MX":station;
+        string label=DisplayName(station);
         float scale=graphics.DpiX/96f;
         using var small=new Font(font.FontFamily,font.SizeInPoints*.85f,FontStyle.Regular,GraphicsUnit.Point);
         var flags=TextFormatFlags.NoPadding|TextFormatFlags.SingleLine|TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis;
@@ -71,3 +75,5 @@ internal sealed partial class MainForm
         }
     }
 }
+
+

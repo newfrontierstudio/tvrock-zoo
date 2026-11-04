@@ -26,6 +26,9 @@ internal sealed partial class MainForm
         _schedule.BookShow=async s=>await NativeBookShow(s);_schedule.StationOrderChanged=order=>{try{Directory.CreateDirectory(RecommendationHome);File.WriteAllLines(Path.Combine(RecommendationHome,"station-order.txt"),order);}catch(Exception error){MessageBox.Show(this,error.Message,"局の並び順を保存できません");}};guidePage.Enter+=(_,_)=>{if(IsHandleCreated)BeginInvoke((Action)ShowCurrentGuideTime);};
         _schedule.ContextShow=(s,p)=>ShowGuideContext(s,_schedule,p);_nativeGuide.CellMouseClick+=(_,e)=>{if(e.Button==MouseButtons.Right&&e.RowIndex>=0&&_nativeGuide.Rows[e.RowIndex].Tag is Show s)ShowGuideContext(s,_nativeGuide,_nativeGuide.PointToClient(Cursor.Position));};
         _schedule.SelectShow=s=>_nativeStatus.Text=s.Start.ToLocalTime().ToString("MM/dd HH:mm")+" "+s.Station+" "+s.Title;
+        CompactProgrammePopup? compactPopup=null;
+        _schedule.HoverCompact=(entries,focus,point)=>{HideLargeTip();compactPopup??=new CompactProgrammePopup();compactPopup.ShowGroup(this,entries,focus,_schedule.PointToScreen(point),s=>GuidePopupWithSearchWord(s)+AssignmentHover(s),s=>_schedule.Booked.Contains(s.Key)?"[予約済] ":_schedule.Disabled.Contains(s.Key)?"[録画しない] ":"",async s=>await NativeBookShow(s));};
+        _schedule.ViewChanged+=()=>compactPopup?.Hide();_tabs.SelectedIndexChanged+=(_,_)=>compactPopup?.Hide();guidePage.Disposed+=(_,_)=>compactPopup?.Dispose();
         InitializeGuideAssignments();_schedule.HoverShow=(s,p)=>{if(s==null)HideLargeTip();else QueueLargeTip(_schedule,GuidePopupWithSearchWord(s)+AssignmentHover(s),p);};
         _nativeReservations.Tag="date-partitions";_nativeGuide.Tag="date-partitions";
         _nativeReservations.RowPostPaint+=PaintDatePartition;_nativeGuide.RowPostPaint+=PaintDatePartition;
@@ -34,7 +37,7 @@ internal sealed partial class MainForm
         var content=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,WrapContents=false,FlowDirection=FlowDirection.TopDown,Padding=new Padding(24)};
         var title=new Label{Text="詳細設定",AutoSize=true,Font=new Font(Font.FontFamily,14,FontStyle.Bold)};
         var explanation=new Label{Text="予約の詳細編集・TVRockの設定を、この画面から開けます。",AutoSize=true,Margin=new Padding(0,12,0,12)};
-        var open=new Button{Text="TVRockのWeb画面を開く",AutoSize=true};var state=new Label{AutoSize=true,Text="おすすめは3日ごと・最大20件。自動実行は上部のON／OFFで切り替えます。",Margin=new Padding(0,15,0,0)};
+        var open=new Button{Text="TVRockのWeb画面を開く",AutoSize=true};var state=new Label{AutoSize=true,Text="おすすめの件数上限は詳細設定で変更できます。自動実行は上部のON／OFFで切り替えます。",Margin=new Padding(0,15,0,0)};
         var tunerCheck=new Button{Text="接続・チューナーを確認",AutoSize=true};tunerCheck.Click+=async(_,_)=>await ShowTunerDiagnostics();
         content.Controls.AddRange([title,explanation]);detailIndex=new FlowLayoutPanel{AutoSize=true,WrapContents=true,Margin=new Padding(0,4,0,16)};content.Controls.Add(detailIndex);connectionDetails=DetailSection(content,"接続・受信","TVRockの接続先とチューナーを確認します。");connectionDetails.Controls.AddRange([open,tunerCheck,state]);_detailLanding.AutoScroll=true;_detailLanding.Controls.Add(content);StyleControls(content);
         open.Click+=async(_,_)=>{_detailLanding.Visible=false;await OpenNativeLegacy("kwl");};

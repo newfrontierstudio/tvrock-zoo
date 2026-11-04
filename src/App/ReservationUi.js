@@ -28,26 +28,31 @@
   document.head.append(style);
 
   // Keep the original named select in its form: only its presentation changes.
-  for (const name of ['ready', 'tale']) {
+  for (const name of ['ready', 'reday', 'tale']) {
     for (const original of document.querySelectorAll(`select[name="${name}"]`)) {
       const initial = Number(original.value);
       if (!Number.isFinite(initial)) continue;
       const values = [...original.options].map(o => Number(o.value)).filter(Number.isFinite);
       const lower = Math.min(...values), upper = Math.max(...values);
-      const label = name === 'ready' ? '録画開始' : '録画終了';
+      const label = name !== 'tale' ? '録画開始' : '録画終了';
       const wrapper = document.createElement('span');
       wrapper.className = 'ts-offset';
+      const direction = document.createElement('select');
+      direction.add(new Option(name !== 'tale' ? '早める' : '短縮する', '-1')); direction.add(new Option(name !== 'tale' ? '遅らせる' : '延長する', '1'));
+      const sign = name !== 'tale' ? -1 : 1;
+      direction.value = String(initial * sign <= 0 ? -1 : 1);
+      direction.setAttribute('aria-label', label + ' 方向');
       const minutes = document.createElement('select');
       const seconds = document.createElement('select');
-      for (let m = Math.trunc(lower / 60); m <= Math.trunc(upper / 60); m++) minutes.add(new Option(String(m), String(m)));
-      for (let s = -59; s <= 59; s++) seconds.add(new Option(String(s), String(s)));
+      for (let m = 0; m <= Math.floor(Math.max(Math.abs(lower), Math.abs(upper)) / 60); m++) minutes.add(new Option(String(m), String(m)));
+      for (let s = 0; s <= 59; s++) seconds.add(new Option(String(s), String(s)));
       minutes.setAttribute('aria-label', label + ' 分');
       seconds.setAttribute('aria-label', label + ' 秒');
-      minutes.value = String(Math.trunc(initial / 60)); seconds.value = String(initial % 60);
-      wrapper.title = name === 'ready' ? '正数は開始前、負数は開始後（分×60＋秒）' : '正数は終了後、負数は終了前（分×60＋秒）';
+      minutes.value = String(Math.floor(Math.abs(initial) / 60)); seconds.value = String(Math.abs(initial) % 60);
+      wrapper.title = label + 'の調整量（分・秒）';
       const sync = () => {
         const m = Number(minutes.value), s = Number(seconds.value);
-        const total = m * 60 + s;
+        const total = (m * 60 + s) * Number(direction.value) * sign;
         seconds.setCustomValidity('');
         if (!Number.isInteger(m) || !Number.isInteger(s) || Math.abs(s) > 59 || total < lower || total > upper) {
           seconds.setCustomValidity(`合計を${lower}～${upper}秒の整数で入力してください。`);
@@ -58,17 +63,18 @@
         original.dispatchEvent(new Event('change', {bubbles:true}));
         return true;
       };
-      minutes.addEventListener('change', sync); seconds.addEventListener('change', sync);
+      direction.addEventListener('change', sync); minutes.addEventListener('change', sync); seconds.addEventListener('change', sync);
       original.before(wrapper);
-      wrapper.append(minutes, '分', seconds);
-      // Existing following text supplies 秒前 / 秒後; preserve these semantics.
+      wrapper.append(direction, minutes, '分', seconds); direction.style.setProperty('width','6.5em','important');
+      // Direction now carries the before/after meaning; retain only the seconds unit.
+      if (original.nextSibling?.nodeType === 3) original.nextSibling.textContent = original.nextSibling.textContent.replace(/^\s*秒(?:前|後)/, '秒');
       original.hidden = true;
       original.form?.addEventListener('submit', event => {
         if (!sync()) { event.preventDefault(); seconds.reportValidity(); }
       });
       original.form?.addEventListener('reset', () => setTimeout(() => {
-        const value = Number(original.value);
-        minutes.value = String(Math.trunc(value / 60)); seconds.value = String(value % 60);
+        const value = Number(original.value); direction.value = String(value * sign <= 0 ? -1 : 1);
+        minutes.value = String(Math.floor(Math.abs(value) / 60)); seconds.value = String(Math.abs(value) % 60);
         seconds.setCustomValidity('');
       }, 0));
     }
