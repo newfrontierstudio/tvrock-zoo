@@ -4,22 +4,22 @@ namespace TsScheduler;
 internal sealed class DisplayOptions
 {
     public bool Zebra {get;set;}
-    public bool ManualTunerSelection {get;set;}
-    public bool ReservationDetailsPopup {get;set;}=true;
-    public bool BroadcastSymbols {get;set;}
-    public bool UpdateNotifications {get;set;}
     public bool GuideDetailsPopup {get;set;}=true;
+    public bool ReservationDetailsPopup {get;set;}=true;
+    public bool UpdateNotifications {get;set;}
+    public bool BroadcastSymbols {get;set;}
+    public bool ManualTunerSelection {get;set;}
     public int PaletteRevision {get;set;}
     public Dictionary<string,string> StationNames {get;set;}=[];
     public Dictionary<string,int> StationColumnWidths {get;set;}=[];
     public Dictionary<string,int> StationColors {get;set;}=[];
     public HashSet<string> ExactStationColors {get;set;}=[];
     internal static string? TestPath;
-    static string PathName=>TestPath??Path.Combine(ConnectionProfiles.Current.Active.Home,"display-options.json");
-    static DisplayOptions? current;
-    internal static DisplayOptions Current=>current??=Read();
-    static DisplayOptions Read(){try{var value=File.Exists(PathName)?JsonSerializer.Deserialize<DisplayOptions>(File.ReadAllText(PathName))??new():new();value.StationNames??=[];value.StationColumnWidths??=[];value.StationColors??=[];value.ExactStationColors??=[];if(value.PaletteRevision<1){if(value.StationColors.TryGetValue("日本テレビ",out int old)){var c=Color.FromArgb(old);if(c.R>c.G&&c.R>c.B)value.StationColors.Remove("日本テレビ");}value.PaletteRevision=1;}return value;}catch{return new();}}
-    internal void Save(){Directory.CreateDirectory(Path.GetDirectoryName(PathName)!);File.WriteAllText(PathName+".tmp",JsonSerializer.Serialize(this));File.Move(PathName+".tmp",PathName,true);}
+    static string? storageHome;internal static void UseHome(string home){storageHome=home;} static string PathName=>TestPath??Path.Combine(storageHome??ConnectionProfiles.Current.Active.Home,"display-options.json");
+    internal static string NamesPath=>Path.Combine(Path.GetDirectoryName(PathName)!,"station-local-names.json"); internal static void SaveStationName(string key,string value,Func<string,string> normalize){LocalStationNameStore.Set(NamesPath,key,value,Current.StationNames,normalize);Current.StationNames=LocalStationNameStore.Read(NamesPath,Current.StationNames);} static DisplayOptions? current;static string? loadedPath;
+    internal static DisplayOptions Current {get{if(current==null||loadedPath!=PathName){current=Read();loadedPath=PathName;current.StationNames=LocalStationNameStore.Read(NamesPath,current.StationNames);}return current;}}
+    static DisplayOptions Read(){try{var value=File.Exists(PathName)?JsonSerializer.Deserialize<DisplayOptions>(File.ReadAllText(PathName))??new():new();value.StationNames??=[];value.StationNames??=[];value.StationColumnWidths??=[];value.StationColors??=[];value.ExactStationColors??=[];if(value.PaletteRevision<1){if(value.StationColors.TryGetValue("日本テレビ",out int old)){var c=Color.FromArgb(old);if(c.R>c.G&&c.R>c.B)value.StationColors.Remove("日本テレビ");}value.PaletteRevision=1;}return value;}catch{return new();}}
+    internal void Save(){StationNames=LocalStationNameStore.Read(NamesPath,StationNames);Directory.CreateDirectory(Path.GetDirectoryName(PathName)!);File.WriteAllText(PathName+".tmp",JsonSerializer.Serialize(this));File.Move(PathName+".tmp",PathName,true);}
 }
 internal sealed partial class MainForm
 {

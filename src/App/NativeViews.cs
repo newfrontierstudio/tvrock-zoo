@@ -82,7 +82,7 @@ internal sealed partial class MainForm
         InitializeReservationSwitches(listPage);
         InitializeStationBadges();
         InitializeRecordingTiming();
-        InitializeWorkspacePreferences(toolbar,listPage);InitializeConnections(toolbar);InitializeDisplayOptions();
+        InitializeWorkspacePreferences(toolbar,listPage);InitializeConnections(toolbar);InitializeDisplayOptions();Shown+=(_,_)=>BeginInvoke(new Action(()=>CompactStudioToolbar(toolbar)));
         _nativeKeywords.Columns["enabled"].Visible=false;
         foreach(var grid in new[]{_nativeReservations,_disabledReservations,_nativeGuide,_nativeKeywords})grid.CellFormatting+=(_,e)=>{if(e.ColumnIndex>=0&&grid.Columns[e.ColumnIndex].Name=="station"&&e.Value is string text)e.Value=text.Replace("MX1","MX");};
         _nativeStation.FormattingEnabled=true;
