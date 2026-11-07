@@ -15,8 +15,8 @@ internal sealed class ConsultPreferences
         string[] Clean(string[]? words){if(words==null||words.Length>30||words.Any(w=>w==null||w.Length>100||w.Any(char.IsControl)))throw new FormatException("条件は各30個・1項目100文字以内です。");return words.Select(w=>w.Trim()).Where(w=>w.Length>0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();}
         value.Include=Clean(value.Include);value.Exclude=Clean(value.Exclude);if(value.Include.Length==0)throw new FormatException("好きな内容が空です。");return value;
     }
-    public static ConsultPreferences Load(string home){var path=Path.Combine(home,"consult-preferences.json");return File.Exists(path)?Parse(File.ReadAllText(path)):new();}
-    public void Save(string home){Directory.CreateDirectory(home);string path=Path.Combine(home,"consult-preferences.json");File.WriteAllText(path+".tmp",JsonSerializer.Serialize(this,Options));File.Move(path+".tmp",path,true);}
+    public static ConsultPreferences Load(string home){var path=Path.Combine(home,"consult-preferences.json");return File.Exists(path)?Parse(ZooStorage.DurableJson.Read(path)):new();}
+    public void Save(string home){Directory.CreateDirectory(home);string path=Path.Combine(home,"consult-preferences.json");ZooStorage.DurableJson.Write(path,JsonSerializer.Serialize(this,Options));}
     public bool Allows(Show show)=>!Exclude.Any(word=>(show.Title+" "+show.Description).Contains(word,StringComparison.OrdinalIgnoreCase));
     public List<Taste> AddTo(List<Taste> tastes)=>tastes.Concat(Include.Select(word=>new Taste(word,1.5))).ToList();
 }

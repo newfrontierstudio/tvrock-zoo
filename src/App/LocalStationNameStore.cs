@@ -23,7 +23,7 @@ internal static class LocalStationNameStore
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             string temporary=path+"."+Guid.NewGuid().ToString("N")+".tmp";
             try{
-                File.WriteAllText(temporary,JsonSerializer.Serialize(names));
+                using(var stream=new FileStream(temporary,FileMode.CreateNew,FileAccess.Write,FileShare.None,4096,FileOptions.WriteThrough)){var bytes=System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(names));stream.Write(bytes);stream.Flush(true);}
                 if(File.Exists(path)){
                     // Preserve a corrupt file without replacing the last good backup with it.
                     bool valid=true;try{Parse(path);}catch{valid=false;}
