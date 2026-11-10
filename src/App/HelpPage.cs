@@ -1,3 +1,4 @@
+using TsRecommend;
 namespace TsScheduler;
 internal sealed partial class MainForm
 {
@@ -17,8 +18,8 @@ internal sealed partial class MainForm
         TextBlock(@"TVRockの予約・番組表を専用画面で操作する非公式ツールです。録画はTVRockが担当します。");
         TextBlock(@"予約する・取り消す／録画時間を調整する",true);
         TextBlock(@"○で「録画しない」へ、×で有効な予約に戻します。編集は行をダブルクリック。
-右クリックの「録画の開始・終了を調整」で秒単位の補正を指定できます。
-開始：−で早く／＋で遅く。終了：−で短縮／＋で延長。
+右クリックの「録画の開始・終了を調整」で分・秒の補正を指定できます。
+開始は「早める／遅らせる」、終了は「短縮する／延長する」を選びます。最大60分です。
 「今後も常に」は同じ局・番組名の先頭一致で、既存予約にも上書きします（Zoo起動中）。
 「予約一覧」の右端の▼から、分割表示／日時順のまとめ表示を切り替えられます。
 ○・×の押し間違いは「元に戻す」。上下の境界はドラッグで高さを調整できます。
@@ -32,8 +33,9 @@ internal sealed partial class MainForm
         TextBlock(@"おすすめ予約を使う",true);
         TextBlock(@"「自動おすすめ予約」をONにするだけ。検索条件や予約履歴を参考に、Zooが関連する番組を選んで予約します。
 ふだんはこれでOK。ChatGPTの準備は要りません。
-今すぐ選ぶときは「おすすめ更新」。自動実行は3日ごとです。件数上限は詳細設定で変更でき、「上限なし」も選べます（初期値20件）。ON／OFFは上部のボタンで切り替えます。
+今すぐ選ぶときは「おすすめ更新」。通常は30分ごとに確認し、取消後は約2分待って再選定します。上限は直近3日の有効件数で数え、取消・録画しないは除きます。件数上限は詳細設定で変更でき、「上限なし」も選べます（初期値30件）。ON／OFFは上部のボタンで切り替えます。
 OFFにしても予約済みの番組は残ります。番組名の前の白い「自動」はPC内で選んだおすすめです。「GPT」は取り込んだGPTの好み条件を参考にしたおすすめです。どちらも最終的な番組選定はPC内で行います。");
+        TextBlock("量子コンテキスト",true);TextBlock(QuantumContextInfo.Description+"\nアプリ：TVRock Zoo "+typeof(MainForm).Assembly.GetName().Version!.ToString(3)+" ／ アルゴリズム："+CognitionHistory.Algorithm+" ／ 互換処理：tvrock-v1");
         TextBlock(@"ChatGPTで好みを相談する（任意）",true);
         TextBlock(@"1. 「ChatGPT」タブの「ChatGPTに相談する」を押します。相談文がコピーされ、ChatGPTが開きます。
 2. ChatGPTに貼り付けて送信し、好きな番組・避けたい内容を答えます。

@@ -1,0 +1,15 @@
+namespace TsRecommend;
+internal static class CognitionProtocolTests
+{
+ internal static void Run(){void Check(bool ok,string name){if(!ok)throw new Exception(name);Console.WriteLine("PASS: "+name);}string root=Path.Combine(Path.GetTempPath(),"Zoo128-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);var now=DateTimeOffset.Now;
+ var booking=new Booking("1","旅の記録 第1回","NHK",1,1,now.AddDays(1),now.AddDays(1).AddHours(1),5,false,true,false,[]);var known=new List<Recommendation>{new("1",booking.Title,"旅","reason",booking.Start,booking.Station,"local",now,booking.End,"show")};var state=new State{CycleStarted=now,PolicyVersion=3};
+ var rows=CognitionHistory.Reconcile(root,[booking],known,state,now);Check(CognitionHistory.Used(rows,state,now)==1,"Enabled recommendation consumes one slot");
+ rows=CognitionHistory.Reconcile(root,[booking with{Enabled=false}],known,state,now);Check(CognitionHistory.Used(rows,state,now)==0,"Disabled recommendation returns quota");var show=new Show("show",1,1,"NHK",booking.Title,"",booking.Start,booking.End,[]);Check(CognitionHistory.CancelledBroadcast(rows,show),"Cancelled broadcast cannot resurrect");Check(!CognitionHistory.CancelledBroadcast(rows,show with{Start=show.Start.AddDays(7),End=show.End.AddDays(7)}),"Next episode remains eligible");
+ CognitionHistory.RecordAction(root,booking,true,now);rows=CognitionHistory.Reconcile(root,[booking],known,state,now);Check(!rows.Single().UserCancelled&&rows.Single().UserSelected&&rows.Single().UserActionAt==now,"Explicit restore records intentional selection and action time");
+ rows=CognitionHistory.Reconcile(root,[],known,state,now);Check(rows.Single().UserCancelled&&CognitionHistory.Used(rows,state,now)==0,"Deleted future recommendation frees quota without deleting cancellation history");
+ rows=CognitionHistory.Reconcile(root,[],known,state,now.AddDays(2));Check(rows.Single().UserCancelled,"Cancellation remains negative history after broadcast ends");
+ state.Pending=[new("pending",now),new("pending",now)];Check(CognitionHistory.Used(rows,state,now)==1,"Unknown network outcome reserves one distinct slot");state.Pending=[new("expired",now.AddDays(-4))];Check(CognitionHistory.Used(rows,state,now)==0,"Old pending attempt expires with rolling window");
+ var stale=new State{NextDue=now.AddMinutes(30),Pending=[new("protected",now)]};CognitionHistory.Schedule(root,now.AddMinutes(2));CognitionHistory.StoreState(root,stale,now.AddMinutes(-1));var saved=CognitionHistory.ReadState(root);Check(saved.NextDue<now.AddMinutes(3)&&saved.Pending.Single().Key=="protected","Concurrent UI cancellation deadline survives worker state save");
+ var second=show with{Key="other",Title="旅の記録 第2回",EventId=2,Start=now.AddDays(2),End=now.AddDays(2).AddHours(1),Actions=new(){{5,"day?r=1&c=1&e=2&d=5"}}};var first=show with{Actions=new(){{5,"day?r=1&c=1&e=1&d=5"}}};var plan=Planner.Make([first,second],[],[new("旅",1)],[new(5,["NHK"])],now,1,s=>(s.Key=="other"?2:.5,"旅","quantum"));Check(plan.Add.Single().Show.Key=="other","Quantum scoring callback controls actual planner order");
+ }
+}

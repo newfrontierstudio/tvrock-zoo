@@ -2,11 +2,11 @@ using System.Text.Json;
 namespace TsRecommend;
 internal sealed class RecommendationOptions
 {
- public int? Maximum{get;set;}=20;
+ public int? Maximum{get;set;}=30;
  public bool PreventMarkedRepeats{get;set;}=true;
  internal static RecommendationOptions Load(string home){string path=Path.Combine(home,"recommend-options.json");var value=File.Exists(path)?JsonSerializer.Deserialize<RecommendationOptions>(ZooStorage.DurableJson.Read(path))??throw new InvalidDataException("おすすめ設定を読めません。"):new();if(value.Maximum is <1 or >100000)throw new InvalidDataException("おすすめの上限設定を確認してください。");return value;}
  internal int Remaining(int alreadyAdded)=>Maximum is int limit?Math.Max(0,limit-Math.Max(0,alreadyAdded)):int.MaxValue;
- internal string Summary=>Maximum is int limit?$"3日ごとに最大{limit}件":"3日ごと・件数の上限なし";
+ internal string Summary=>Maximum is int limit?$"直近3日間に最大{limit}件":"直近3日間・件数の上限なし";
  internal void Save(string home){if(Maximum is <1 or >100000)throw new InvalidDataException("上限は1～100000件、または上限なしを選んでください。");Directory.CreateDirectory(home);string path=Path.Combine(home,"recommend-options.json");ZooStorage.DurableJson.Write(path,JsonSerializer.Serialize(this));}
 }
 internal sealed record MarkedEpisode(string Path,string Title,string Station,string Description);

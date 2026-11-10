@@ -123,7 +123,7 @@ internal sealed partial class MainForm
             string? selected=(_nativeReservations.CurrentRow?.Tag as Booking)?.Id;
             int first=Math.Max(0,_nativeReservations.FirstDisplayedScrollingRowIndex);
             string? firstId=first<_nativeReservations.Rows.Count?(_nativeReservations.Rows[first].Tag as Booking)?.Id:null;
-            _nativeBookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));
+            _nativeBookings=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch"));RefreshCognitionSnapshot();
             var file=Path.Combine(RecommendationHome,"ai-recommendations.json");_nativeAi=File.Exists(file)?JsonSerializer.Deserialize<List<AiEntry>>(File.ReadAllText(file),NativeJson)??[]:[];
             string displayStamp=ReservationDisplayFingerprint(_nativeBookings,_nativeAi);
             if(!force&&displayStamp==_reservationDisplayStamp){_reservationReadStamp=ReservationStamp();return;}

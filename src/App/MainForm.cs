@@ -36,7 +36,7 @@ internal sealed partial class MainForm : Form
     private readonly ToolTip _recommendTip = new();
     private readonly System.Windows.Forms.Timer _recommendTimer = new() { Interval = 30000 };
     private string _lastRecommendationStamp = "";
-    private DateTimeOffset _nextRecommendationAttempt;
+    private DateTimeOffset _nextRecommendationAttempt;private DateTime _recommendationStateStamp;
 
     public MainForm(bool startInTray)
     {
@@ -101,7 +101,7 @@ internal sealed partial class MainForm : Form
     {
 
         var menu = new ContextMenuStrip();
-        var enabled = new ToolStripMenuItem("3日ごとの自動おすすめ予約") { CheckOnClick = true, Checked = !File.Exists(Path.Combine(RecommendationHome, "recommend-disabled.txt")) };
+        var enabled = new ToolStripMenuItem("自動おすすめ予約（30分ごとに再評価）") { CheckOnClick = true, Checked = !File.Exists(Path.Combine(RecommendationHome, "recommend-disabled.txt")) };
         _recommendToggle.Checked = enabled.Checked;
         void ShowMode() { _recommendToggle.Text = "自動おすすめ予約 " + (enabled.Checked ? "ON" : "OFF"); _recommendToggle.BackColor = enabled.Checked ? Color.FromArgb(218,238,228) : Color.FromArgb(231,238,247); _recommendToggle.FlatAppearance.CheckedBackColor=_recommendToggle.BackColor;_recommend.BackColor=_recommendToggle.BackColor;_recommend.ForeColor=Ink;_recommendTip.SetToolTip(_recommendToggle,$"検索条件・予約履歴からPC内で選定し、{RecommendationSummary()}を予約。OFFでも既存の予約は残ります。ChatGPTの設定ではありません。"); }
         bool restoringMode = false;
@@ -139,9 +139,11 @@ internal sealed partial class MainForm : Form
     }
     private async Task RunDueRecommendationsAsync()
     {
-        if(!_recommend.Enabled || DateTimeOffset.Now<_nextRecommendationAttempt || File.Exists(Path.Combine(RecommendationHome,"recommend-disabled.txt"))) return;
-        try { var file=Path.Combine(RecommendationHome,"recommend-state.json"); if(File.Exists(file)){using var doc=System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));if(doc.RootElement.TryGetProperty("nextDue",out var due)&&due.ValueKind==System.Text.Json.JsonValueKind.String&&due.GetDateTimeOffset()>DateTimeOffset.Now)return;} _nextRecommendationAttempt=DateTimeOffset.Now.AddMinutes(30); await RunRecommendationsAsync(true); }
-        catch(Exception error){_nextRecommendationAttempt=DateTimeOffset.Now.AddMinutes(30);Log("おすすめ自動実行を延期: "+error.Message);}
+        if(!_recommend.Enabled||File.Exists(Path.Combine(RecommendationHome,"recommend-disabled.txt")))return;
+        string file=Path.Combine(RecommendationHome,"recommend-state.json");var stamp=File.GetLastWriteTimeUtc(file);var now=DateTimeOffset.Now;
+        if(now<_nextRecommendationAttempt&&stamp==_recommendationStateStamp)return;
+        try{if(File.Exists(file)){using var doc=System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));if(doc.RootElement.TryGetProperty("nextDue",out var due)&&due.ValueKind==System.Text.Json.JsonValueKind.String&&due.GetDateTimeOffset()>now){_nextRecommendationAttempt=due.GetDateTimeOffset();_recommendationStateStamp=stamp;return;}}_nextRecommendationAttempt=now.AddMinutes(30);await RunRecommendationsAsync(true);_recommendationStateStamp=File.GetLastWriteTimeUtc(file);}
+        catch(Exception error){_nextRecommendationAttempt=now.AddMinutes(30);_recommendationStateStamp=stamp;Log("おすすめ自動実行を延期: "+error.Message);}
     }
     private async Task RunRecommendationsAsync(bool scheduled=false)
     {

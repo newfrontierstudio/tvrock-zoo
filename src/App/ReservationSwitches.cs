@@ -72,7 +72,7 @@ internal sealed partial class MainForm
             catch(Exception e)when(e is HttpRequestException or TaskCanceledException){sendError=e;File.WriteAllText(Path.Combine(folder,"transport-error.txt"),e.ToString());}
             Booking? updated=null;
             for(int attempt=0;attempt<12;attempt++){await Task.Delay(250);updated=Data.Bookings(Path.Combine(RockFolder,"tvrock.sch")).SingleOrDefault(b=>b.Id==current.Id&&b.Start==current.Start&&Data.Norm(b.Title)==Data.Norm(current.Title));if(updated?.Enabled==enable)break;}if(updated==null||updated.Enabled!=enable)throw new IOException(sendError==null?"反映を確認できません。一覧を更新して状態をご確認ください。":"TVRockとの通信が途切れ、変更を確認できませんでした。状態を更新しました。予約変更は自動再送していません。",sendError);
-            RecordReservationChange(current,enable);
+            RecordReservationChange(current,enable);CognitionHistory.RecordAction(RecommendationHome,current,enable,DateTimeOffset.Now);_nextRecommendationAttempt=DateTimeOffset.Now.AddMinutes(2);
             File.WriteAllText(Path.Combine(folder,"result.txt"),current.Id+" enabled="+enable);LoadNativeReservations();RevealChangedReservation(current.Id,enable);
         }catch(Exception e){Log("予約の切替: "+e);LoadNativeReservations();MessageBox.Show(this,e is HttpRequestException or TaskCanceledException?"TVRockの編集画面を読み込めませんでした。少し待ってから、もう一度クリックしてください。":e.Message,"予約の切替");}finally{_changingReservation=false;}
     }

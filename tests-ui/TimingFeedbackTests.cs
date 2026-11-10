@@ -5,6 +5,7 @@ internal static class TimingFeedbackTests{
  Check(KeywordTiming.Read(new Dictionary<string,string>{{"REDAY","-27"},{"READY","0"}})==(27,0),"Wednesday +27 seconds uses TVRock keyword REDAY");
  Check(KeywordTiming.Read(new Dictionary<string,string>{{"REDAY","-35"},{"TALE","0"}})==(35,0),"Appraisal programme +35 seconds preserved");
  Check(KeywordTiming.Read(new Dictionary<string,string>{{"READY","30"},{"TALE","-10"}})==(-30,-10),"READY compatibility and end offset retained");
+ using(var offset=new RecordingOffsetInput(true,-125)){Check(offset.Minutes.Value==2&&offset.Seconds.Value==5&&offset.Value==-125,"Minutes and seconds preserve signed start offset");offset.Direction.SelectedIndex=1;Check(offset.Value==125,"Direction changes sign without losing minutes");offset.Minutes.Value=60;Check(offset.Seconds.Value==0&&offset.Value==3600,"60 minutes clamps seconds and respects bound");offset.Value=-3599;Check(offset.Minutes.Value==59&&offset.Seconds.Value==59&&offset.Value==-3599,"Boundary round-trip preserves seconds");}
  var start=new DateTimeOffset(2026,10,28,17,0,0,TimeSpan.FromHours(9));var b=new Booking("wed","[生]５時に夢中！ 特集[字]","MX",1,1,start,start.AddHours(1),0,true,true,false,new(){["READY"]="-27",["TALE"]="0"});
  var settings=new TimingSettings{Rules=[new("MX","５時に夢中！",0,-10),new("MX","５時に夢中！",27,0,8)]};
  Check(settings.Desired(b)==(27,0),"Wednesday-specific timing overrides general rule despite broadcast marks");
