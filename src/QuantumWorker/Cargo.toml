@@ -1,0 +1,14 @@
+[package]
+name = "quantum-core-rs"
+version = "0.9.0"
+edition = "2021"
+description = "Rust prototype of the NfsCore quantum-cognition v2 engine (standalone worker, JSON in/out)"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = "0.4"
+unicode-normalization = "0.1"
+
+[profile.release]
+opt-level = 3

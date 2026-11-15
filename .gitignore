@@ -20,3 +20,5 @@ recommend-status.json
 *.bak
 
 benchmark-results.json
+
+**/target/

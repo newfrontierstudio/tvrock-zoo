@@ -147,7 +147,7 @@ internal sealed partial class MainForm : Form
     }
     private async Task RunRecommendationsAsync(bool scheduled=false)
     {
-        var executable=Path.Combine(AppContext.BaseDirectory,"Recommend","TsRecommend.exe");
+        var executable=RecommendationExecutable();
         if(!File.Exists(executable)){MessageBox.Show(this,"おすすめ処理の実行ファイルが見つかりません。");return;}
         _recommend.Enabled=false;_recommend.Text="おすすめ選定中…";
         try

@@ -19,7 +19,7 @@ SetupIconFile=..\src\App\app.ico
 Uninstallable=yes
 CreateUninstallRegKey=yes
 UninstallDisplayIcon={app}\TVRockZoo.exe
-Compression=lzma2
+Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=no
@@ -32,15 +32,17 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "desktopicon"; Description: "デスクトップにショートカットを作成"; Flags: unchecked
 
 [Files]
-Source: "{#BuildRoot}\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,MediaTools\*,media-cache\*"
+Source: "{#BuildRoot}\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,*.xml,package-validation.json,inferno*,InfernoSource\*,InfernoLicenses\*,licenses\Inferno\*,MediaTools\*,media-cache\*"
 
 [Icons]
-Name: "{group}\inferno Studio"; Filename: "{app}\inferno.exe"
 Name: "{group}\TVRock Zoo"; Filename: "{app}\TVRockZoo.exe"
 Name: "{autodesktop}\TVRock Zoo"; Filename: "{app}\TVRockZoo.exe"; Tasks: desktopicon
 
 Name: "{group}\TVRock Zoo をアンインストール"; Filename: "{uninstallexe}"
 
+
+[InstallDelete]
+Type: files; Name: "{group}\inferno Studio.lnk"
 
 [Messages]
 ConfirmUninstall=%1 のアプリ本体とショートカットを削除します。よろしいですか？%n%n録画中の場合は終了を待ち、アプリを完全終了してください。%n録画ファイル・予約・設定、TVRock・TVTestは削除しません。%n
