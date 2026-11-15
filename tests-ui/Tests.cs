@@ -3,6 +3,13 @@ static class CompatibilityTests{
  static void Check(bool good,string label){if(!good)throw new Exception(label);Console.WriteLine("PASS: "+label);}
  [STAThread]static int Main(string[] args){if(args.Contains("--private-receipt-acceptance"))return ReceiptAcceptance.Run().GetAwaiter().GetResult();ApplicationConfiguration.Initialize();Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);try{
  ConnectionProfile.TestRoot=Path.Combine(Path.GetTempPath(),"zoo128-isolated-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(ConnectionProfile.TestRoot);
+ if(args.Contains("--zoo130-only")){
+ var now=DateTimeOffset.Now;var zooShow=new Show("test",1,1,"テレ東","モヤモヤさまぁ〜ず２","",now.AddHours(2),now.AddHours(3),[]);
+ Check(MainForm.MatchesQuery(zooShow,"モヤモヤさまぁ～ず"),"Guide search handles wave dash variants");
+ var b=new Booking("x",zooShow.Title,zooShow.Station,1,1,zooShow.Start,zooShow.End,5,true,true,false,new(){{"SEARCHID","-7"}});
+ var ai=new MainForm.AiEntry("x",zooShow.Title,"古いおすすめ","",zooShow.Start,zooShow.Station);
+ Check(!MainForm.IsAiBooking(b,ai),"Search reservation never displays stale automatic badge");
+ TsScheduler.Tests.GuideReservationTests.Run().GetAwaiter().GetResult();Console.WriteLine("PASS Zoo 1.3.0 UI and reservation transaction");return 0;}
  TimingFeedbackTests.Run();SynchronizationContext.SetSynchronizationContext(null);if(args.Contains("--quantum-ui-only"))return QuantumUiTests.Run();if(args.Contains("--timing-feedback-only"))return 0;
  TsRenameSupportTests.Run();if(args.Contains("--tsrename-only"))return 0;
  Check(ScheduleGrid.ReservationBadgeLabel(true,new GuideAssignment("BonDriver_PXMLT5PE_D1.dll",false))=="録画中｜2"&&ScheduleGrid.ReservationBadgeLabel(false)=="予約済","Recording guide badge distinguishes active recording and retains tuner number");TsScheduler.Tests.GuideReservationTests.Run().GetAwaiter().GetResult();CommonBehaviorTests.Run();AllocationTests.Run();Check(new GuideAssignment("BonDriver_PXMLT5PE_D0.dll",false).BadgeNumber=="1"&&new GuideAssignment("BonDriver_PXMLT5PE_D4.dll",false).BadgeNumber=="5","PLEX badge numbers are one-based");

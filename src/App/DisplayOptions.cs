@@ -45,7 +45,7 @@ internal sealed partial class MainForm
 
         var booking=DetailSection(body,"予約の操作","空きチューナーを自動選択します。既存予約の再配置には確認を表示します。");var manual=new CheckBox{Text="予約時にチューナーを手動選択",AutoSize=true,Checked=DisplayOptions.Current.ManualTunerSelection};booking.Controls.Add(manual);manual.CheckedChanged+=(_,_)=>{DisplayOptions.Current.ManualTunerSelection=manual.Checked;DisplayOptions.Current.Save();};
         InitializeKeywordFilenameOptions(DetailSection(body,"録画ファイル名","TVRockの録画ファイル名に付ける検索ワードを設定します。"));
-        InitializeRecommendationSettings(DetailSection(body,"おすすめ予約","上限は次回の選定から適用します。既存の予約は減らしません。"));
+        InitializeRecommendationSettings(DetailSection(body,"Satlite","上限は次回の選定から適用します。既存の予約は減らしません。"));
         InitializeTsRenameSupport(DetailSection(body,"TsRename連携","録画後のファイル名変更に使う外部ツールの設定を確認します。"));
         InitializeDiagnosticLogging(DetailSection(body,"診断","問題を調べるためのログ設定です。"));
         InitializeStationColorEditor(appearance);InitializeGestureOptions(appearance);InitializeUpdateNotifications(DetailSection(body,"アップデート","更新通知は初期OFFです。"));StyleControls(body);_detailLanding.SizeChanged+=(_,_)=>FitDetailIndex();FitDetailIndex();BuildModernDetails(body);

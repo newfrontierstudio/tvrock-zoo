@@ -35,7 +35,7 @@ internal sealed partial class MainForm
 ふだんはこれでOK。ChatGPTの準備は要りません。
 今すぐ選ぶときは「おすすめ更新」。通常は30分ごとに確認し、取消後は約2分待って再選定します。上限は直近3日の有効件数で数え、取消・録画しないは除きます。件数上限は詳細設定で変更でき、「上限なし」も選べます（初期値30件）。ON／OFFは上部のボタンで切り替えます。
 OFFにしても予約済みの番組は残ります。番組名の前の白い「自動」はPC内で選んだおすすめです。「GPT」は取り込んだGPTの好み条件を参考にしたおすすめです。どちらも最終的な番組選定はPC内で行います。");
-        TextBlock("量子コンテキスト",true);TextBlock(QuantumContextInfo.Description+"\nアプリ：TVRock Zoo "+typeof(MainForm).Assembly.GetName().Version!.ToString(3)+" ／ アルゴリズム："+CognitionHistory.Algorithm+" ／ 互換処理：tvrock-v1");
+        TextBlock("量子コンテキスト",true);TextBlock(QuantumContextInfo.Description+"\nアプリ：TVRock Zoo "+typeof(MainForm).Assembly.GetName().Version!.ToString(3)+" ／ アルゴリズム："+CognitionHistory.Algorithm+" ／ 互換処理：tvrock-v3");
         TextBlock(@"ChatGPTで好みを相談する（任意）",true);
         TextBlock(@"1. 「ChatGPT」タブの「ChatGPTに相談する」を押します。相談文がコピーされ、ChatGPTが開きます。
 2. ChatGPTに貼り付けて送信し、好きな番組・避けたい内容を答えます。

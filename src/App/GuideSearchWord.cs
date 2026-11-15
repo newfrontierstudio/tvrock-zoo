@@ -4,7 +4,7 @@ internal sealed partial class MainForm
 {
     internal static string BookingSearchWord(Booking booking,AiEntry? ai,IReadOnlyList<KeywordEntry> keywords)
     {
-        if(!string.IsNullOrWhiteSpace(ai?.SearchWord))return ai.SearchWord;
+        if(!UserRulePriority.HasSearchOrigin(booking)&&!string.IsNullOrWhiteSpace(ai?.SearchWord))return ai.SearchWord;
         string saved=booking.Fields.GetValueOrDefault("SEARCHWORD","");
         if(!string.IsNullOrWhiteSpace(saved))return saved;
         string key=booking.Fields.GetValueOrDefault("SEARCHID","");

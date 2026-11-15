@@ -114,7 +114,7 @@ internal sealed partial class MainForm
             LoadNativeReservations();LoadNativeGuideCache();
         } catch(Exception e){_engineStatus.Text="読み込み失敗: "+e.Message;}
     }
-    internal static bool IsAiBooking(Booking booking,AiEntry ai) => booking.Id==ai.ReservationId && booking.Station==ai.Station && Math.Abs((booking.Start-ai.Start).TotalSeconds)<90;
+    internal static bool IsAiBooking(Booking booking,AiEntry ai) => !UserRulePriority.HasSearchOrigin(booking) && booking.Id==ai.ReservationId && booking.Station==ai.Station && Math.Abs((booking.Start-ai.Start).TotalSeconds)<90;
     static string ReservationStamp()=>string.Join("/",new[]{Path.Combine(RockFolder,"tvrock.sch"),Path.Combine(RecommendationHome,"ai-recommendations.json")}.Select(p=>File.Exists(p)?File.GetLastWriteTimeUtc(p).Ticks:0));
     void LoadNativeReservations(bool force=true)
     {
@@ -158,9 +158,9 @@ internal sealed partial class MainForm
     void SearchNativeKeyword(){if(_nativeKeywords.CurrentRow?.Tag is not KeywordEntry k)return;_nativeQuery.Text=k.Title;_tabs.SelectedIndex=1;RenderNativeGuide();}
     internal static bool MatchesQuery(Show show,string query)
     {
-        query=Data.Clean(query);if(query.Length==0)return true;var m=Regex.Match(query,@"^(.*?)\s+not\s+(.+)$",RegexOptions.IgnoreCase);string yes=m.Success?m.Groups[1].Value:query;
-        bool positive=yes.Split(' ',StringSplitOptions.RemoveEmptyEntries).All(p=>Regex.IsMatch(Data.Clean(show.Title),p,RegexOptions.IgnoreCase,TimeSpan.FromMilliseconds(80)));
-        return positive&&(!m.Success||!Regex.IsMatch(Data.Clean(show.Title),m.Groups[2].Value,RegexOptions.IgnoreCase,TimeSpan.FromMilliseconds(80)));
+        query=UserRulePriority.Plain(query);if(query.Length==0)return true;var m=Regex.Match(query,@"^(.*?)\s+not\s+(.+)$",RegexOptions.IgnoreCase);string yes=m.Success?m.Groups[1].Value:query;
+        bool positive=yes.Split(' ',StringSplitOptions.RemoveEmptyEntries).All(p=>Regex.IsMatch(UserRulePriority.Plain(show.Title),p,RegexOptions.IgnoreCase,TimeSpan.FromMilliseconds(80)));
+        return positive&&(!m.Success||!Regex.IsMatch(UserRulePriority.Plain(show.Title),m.Groups[2].Value,RegexOptions.IgnoreCase,TimeSpan.FromMilliseconds(80)));
     }
     void LoadNativeGuideCache()
     {

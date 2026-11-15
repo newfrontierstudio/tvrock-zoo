@@ -11,6 +11,7 @@ internal sealed partial class MainForm
   var repeats=new CheckBox{Text="指定した番組と同じ回の再録画を防ぐ",AutoSize=true,Checked=options.PreventMarkedRepeats};body.Controls.Add(repeats);
   body.Controls.Add(new Label{Text="録画済み一覧の「再録画を防ぐ」で指定します。Zooのおすすめ選定に適用し、TVRockの検索予約・既存予約は変更しません。",AutoSize=true,MaximumSize=new Size(650,0)});
   bool restoring=false;void Save(){if(restoring)return;var previous=RecommendationOptions.Load(RecommendationHome);try{options.Maximum=unlimited.Checked?null:(int)number.Value;options.PreventMarkedRepeats=repeats.Checked;options.Save(RecommendationHome);number.Enabled=!unlimited.Checked;RefreshRecommendationStatus();}catch(Exception e){restoring=true;options=previous;unlimited.Checked=previous.Maximum==null;number.Value=previous.Maximum??30;number.Enabled=!unlimited.Checked;repeats.Checked=previous.PreventMarkedRepeats;restoring=false;MessageBox.Show(this,e.Message,"おすすめ設定を保存できません");}}
+  body.Controls.Add(new Label{Text="予約や取消の操作を、次のおすすめに反映します。ユーザーの予約と自動検索予約を優先し、Satliteは空き枠へ追加します。",AutoSize=true,MaximumSize=new Size(650,0)});
   AddQuantumSettings(body);
   number.ValueChanged+=(_,_)=>Save();unlimited.CheckedChanged+=(_,_)=>Save();repeats.CheckedChanged+=(_,_)=>Save();
  }
