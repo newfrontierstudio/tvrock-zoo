@@ -4,12 +4,13 @@ internal sealed class SetupDialog : Form
 {
     readonly TextBox folder = new() { Dock = DockStyle.Fill };
     readonly TextBox address = new() { Dock = DockStyle.Fill };
+    readonly Label detectionStatus = new() { AutoSize = true, MaximumSize = new Size(510, 0) };
     internal SetupDialog(Func<bool>? canSave=null)
     {
         Text = "TVRock Zoo — 接続設定";
         Font = new Font("Meiryo UI", 10);
         AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(700, 330);
+        ClientSize = new Size(700, 370);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false; MinimizeBox = false;
@@ -22,6 +23,28 @@ internal sealed class SetupDialog : Form
                     if (candidate != null && File.Exists(Path.Combine(candidate,"tvrock.sch"))) { folder.Text = candidate; break; }
                 } catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException) { }
         }
+        var detect = new Button { Text = "TvRock設定を読み込む", AutoSize = true };
+        void ReadTvRockSettings(bool showMissing)
+        {
+            var found = TvRockSetupDiscovery.Detect(folder.Text);
+            if (found is null)
+            {
+                detectionStatus.Text = showMissing ? "TvRockの設定を検出できません。フォルダーと起動状態を確認してください。" : "";
+                return;
+            }
+            if (folder.Text.Length == 0) folder.Text = found.Folder;
+            if (found.Url is not null)
+            {
+                address.Text = found.Url;
+                detectionStatus.Text = found.Message;
+            }
+            else detectionStatus.Text = found.Message;
+        }
+        detect.Click += (_, _) => ReadTvRockSettings(showMissing: true);
+        bool savedAddressIsLocal = Uri.TryCreate(address.Text, UriKind.Absolute, out var savedUrl) && savedUrl.IsLoopback;
+        bool savedAddressIsMissing = !Uri.TryCreate(address.Text, UriKind.Absolute, out _);
+        if (savedAddressIsLocal || folder.Text.Length == 0 && savedAddressIsMissing)
+            ReadTvRockSettings(showMissing: false);
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), ColumnCount = 3, RowCount = 5 };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 125));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -31,7 +54,8 @@ internal sealed class SetupDialog : Form
         browse.Click += (_, _) => { using var picker = new FolderBrowserDialog(); if (picker.ShowDialog(this) == DialogResult.OK) folder.Text = picker.SelectedPath; };
         layout.Controls.Add(browse, 2, 0);
         layout.Controls.Add(new Label { Text = "TVRock Web URL", AutoSize = true }, 0, 1); layout.Controls.Add(address, 1, 1); layout.SetColumnSpan(address, 2);
-        var note = new Label { AutoSize = true, MaximumSize = new Size(620,0), Text = "①「参照」でTVRockのフォルダーを選びます（起動中なら自動検出）。\n②いつもTVRockを開くURLを貼り付けます。末尾の /list などは自動で整えます。\n③「保存して続ける」で完了。設定のやり直しでも、録画ファイルとTVRockの予約は変更しません。\nZooの設定保存先：%LOCALAPPDATA%\\TVRockZoo" };
+        layout.Controls.Add(detectionStatus, 0, 2); layout.SetColumnSpan(detectionStatus, 2); layout.Controls.Add(detect, 2, 2);
+        var note = new Label { AutoSize = true, MaximumSize = new Size(620,0), Text = "①TVRockフォルダーを選びます（起動中なら自動検出）。\n②「TvRock設定を読み込む」でアカウントとポートからURLを入力できます。別PCの録画サーバーはそのPCのURLを指定してください。\n③URLを確認して「保存して続ける」。設定のやり直しでも、録画ファイルとTVRockの予約は変更しません。\nZooの設定保存先：%LOCALAPPDATA%\\TVRockZoo" };
         layout.Controls.Add(note, 0, 3); layout.SetColumnSpan(note, 3);
         var save = new Button { Text = "保存して続ける", AutoSize = true };
         save.Click += (_, _) => {
@@ -41,13 +65,13 @@ internal sealed class SetupDialog : Form
             try { if(File.Exists(TsRecommend.ConnectionProfiles.FilePath))File.Copy(TsRecommend.ConnectionProfiles.FilePath,TsRecommend.ConnectionProfiles.FilePath+".before-setup",true);profiles.Save(); DialogResult = DialogResult.OK; Close(); } catch (Exception e) { MessageBox.Show(this, e.Message); }
         };
         layout.Controls.Add(save, 1, 4); var cancel=new Button{Text="キャンセル",AutoSize=true,DialogResult=DialogResult.Cancel};layout.Controls.Add(cancel,2,4);CancelButton=cancel;Controls.Add(layout); AcceptButton = save;
-        foreach(var button in new[]{browse,save}){button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=Color.FromArgb(231,238,247);RoundedControls.Apply(button);}
+        foreach(var button in new[]{browse,save,detect}){button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.BackColor=Color.FromArgb(231,238,247);RoundedControls.Apply(button);}
     }
         internal static TsRecommend.ConnectionProfiles ReadForSetup(){try{return TsRecommend.ConnectionProfiles.Read();}catch(Exception e)when(e is System.Text.Json.JsonException or InvalidDataException or IOException or UnauthorizedAccessException){return new();}}
     internal static TsRecommend.ConnectionProfile UpdateProfile(TsRecommend.ConnectionProfiles profiles,string folder,string address)
     {
         var previous=profiles.Active;var updated=new TsRecommend.ConnectionProfile{Id=previous.Id,Name=previous.Name,Folder=folder,Url=TsRecommend.ConnectionProfile.Normalize(address)};updated.Validate();
-        if(previous.Folder.Length>0&&(!previous.Folder.Equals(updated.Folder,StringComparison.OrdinalIgnoreCase)||!previous.Url.Equals(updated.Url,StringComparison.OrdinalIgnoreCase))){updated.Id=Guid.NewGuid().ToString("N");profiles.Profiles.Add(updated);}else profiles.Profiles[profiles.Profiles.FindIndex(p=>p.Id==previous.Id)]=updated;profiles.ActiveId=updated.Id;return updated;
+        if(previous.Folder.Length>0&&!previous.Folder.Equals(updated.Folder,StringComparison.OrdinalIgnoreCase)){updated.Id=Guid.NewGuid().ToString("N");profiles.Profiles.Add(updated);}else profiles.Profiles[profiles.Profiles.FindIndex(p=>p.Id==previous.Id)]=updated;profiles.ActiveId=updated.Id;return updated;
     }
     internal static bool EnsureConfigured(bool force=false)
     {
