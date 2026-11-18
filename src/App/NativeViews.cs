@@ -68,8 +68,9 @@ internal sealed partial class MainForm
         _nativeGuide.CellDoubleClick+=async(_,e)=>{if(e.RowIndex>=0&&_nativeGuide.Rows[e.RowIndex].Tag is Show s)await NativeBookShow(s);};
         var keybar=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(4)};
         var keySearch=new Button{Text="検索ワードで探す",AutoSize=true};keySearch.Click+=(_,_)=>SearchNativeKeyword();
+        var keyAdd=new Button{Text="新規追加",AutoSize=true,BackColor=Color.FromArgb(207,231,235),UseVisualStyleBackColor=false};keyAdd.Click+=async(_,_)=>await OpenNativeLegacy("kws");
         var keyEdit=new Button{Text="条件を編集",AutoSize=true};keyEdit.Click+=async(_,_)=>{if(_nativeKeywords.CurrentRow?.Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
-        InitializeConsult(keybar);keybar.Controls.AddRange([keySearch,keyEdit]); keysPage.Controls.Add(_nativeKeywords);keysPage.Controls.Add(keybar);
+        InitializeConsult(keybar);keybar.Controls.AddRange([keySearch,keyAdd,keyEdit]); keysPage.Controls.Add(_nativeKeywords);keysPage.Controls.Add(keybar);
         Col(_nativeKeywords,"order","優先度",75);Col(_nativeKeywords,"enabled","状態",65);Col(_nativeKeywords,"title","検索ワード",330);Col(_nativeKeywords,"detail","詳細条件",220);Col(_nativeKeywords,"station","局",180);Col(_nativeKeywords,"days","曜日",130);Col(_nativeKeywords,"hours","時間",100);Col(_nativeKeywords,"candidates","取得済み番組表内の候補",340,true);
         _nativeKeywords.CellDoubleClick+=async(_,e)=>{if(e.RowIndex>=0&&_nativeKeywords.Rows[e.RowIndex].Tag is KeywordEntry k)await OpenNativeLegacy("kwl?i="+Uri.EscapeDataString(k.Id));};
         foreach(var g in new[]{_nativeReservations,_nativeGuide,_nativeKeywords}) { g.DefaultCellStyle.Font=new Font("Meiryo UI",10);g.AlternatingRowsDefaultCellStyle.BackColor=Color.FromArgb(243,247,252);g.ColumnHeaderMouseClick+=(_,e)=>SortNativeGrid(g,e.ColumnIndex); }
